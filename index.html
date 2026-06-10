@@ -10,12 +10,9 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Galaxy background -->
   <canvas id="bg-canvas"></canvas>
-  <!-- Custom cursor -->
   <div id="cursor-ring"></div>
 
-  <!-- Nav -->
   <nav>
     <span class="nav-logo">C</span>
     <span class="nav-email">clark@cash33</span>
@@ -27,7 +24,6 @@
     </ul>
   </nav>
 
-  <!-- Left socials bar -->
   <aside class="socials-bar">
     <div class="socials-pill">
       <a href="#" title="GitHub">
@@ -45,25 +41,50 @@
     </div>
   </aside>
 
-    <!-- Hero -->
   <section id="hero">
-    <div class="hero-left">
-      <p class="hero-hello">Hello! I'm</p>
-      <h1 class="hero-name">CLARK</h1>
-      <div class="hero-roles">
-        <p class="hero-an">A</p>
-        <div class="hero-role-scroll">
-          <span>DEVELOPER</span>
-          <span>OPTIMIZER</span>
-          <span>CASH33</span>
-          <span>CREATOR</span>
-        </div>
-      </div>
+  <div class="hero-left">
+    <p class="hero-hello">Hello! I'm</p>
+    <h1 class="hero-name" aria-label="CLARK">
+  <span class="glitch-wrap">
+    <span class="glitch-main">CLARK</span>
+    <span class="glitch-r" aria-hidden="true">CLARK</span>
+    <span class="glitch-b" aria-hidden="true">CLARK</span>
+  </span>
+</h1>
+    <div class="hero-roles">
+      <p class="hero-an">A</p>
+      <span id="scramble-role">DEVELOPER</span>
     </div>
+    <!-- ── AI Terminal Chat ── -->
+<div class="ai-terminal" id="ai-terminal">
+  <div class="ai-terminal-bar">
+    <span class="t-dot t-red"></span>
+    <span class="t-dot t-yellow"></span>
+    <span class="t-dot t-green"></span>
+    <span class="t-title">clark@cash33 ~ assistant</span>
+  </div>
+  <div class="ai-terminal-messages" id="ai-messages">
+    <div class="ai-msg ai-msg--bot">
+      <span class="t-dim">» </span><span class="t-green-t">[AI]</span> Hey — ask me anything about Clark or this site.
+    </div>
+  </div>
+  <div class="ai-terminal-input-row">
+    <span class="t-dim t-prompt">$ </span>
+    <input id="ai-input" class="ai-input" type="text" placeholder="type your question..." autocomplete="off" spellcheck="false" />
+    <button id="ai-send" class="ai-send-btn" aria-label="Send">&#9656;</button>
+  </div>
+</div>
+  </div>
 
-    <!-- Reactive memoji -->
+
+
+
+
+
+
+
     <div class="memoji" id="memoji">
-      <svg viewBox="0 0 400 460" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="-80 -60 560 580" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="skin" cx="40%" cy="35%" r="75%">
             <stop offset="0%" stop-color="#ffd9b8"/>
@@ -81,33 +102,50 @@
             <stop offset="60%"  stop-color="rgba(124,58,237,0.06)"/>
             <stop offset="100%" stop-color="rgba(124,58,237,0)"/>
           </radialGradient>
+          <filter id="orb-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="trail-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#ffffff" stop-opacity="1"/>
+            <stop offset="15%"  stop-color="#ff4dd8" stop-opacity="1"/>
+            <stop offset="40%"  stop-color="#d946ef" stop-opacity="0.7"/>
+            <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+          </linearGradient>
         </defs>
 
-        <ellipse class="m-halo" cx="200" cy="230" rx="218" ry="218" fill="url(#halo2)"/>
-        <ellipse class="m-halo" cx="200" cy="230" rx="200" ry="200" fill="url(#halo)"/>
+        <!-- Orbit rings -->
+        <g id="m-orbits">
+          <!-- Glow layer -->
+          <ellipse cx="200" cy="250" rx="260" ry="76" fill="none" stroke="rgba(157,95,245,0.6)" stroke-width="6" filter="url(#orb-glow)" class="orb-pulse-1"/>
+          <ellipse cx="200" cy="250" rx="232" ry="98" fill="none" stroke="rgba(180,120,255,0.5)" stroke-width="5" filter="url(#orb-glow)" transform="rotate(-38 200 250)" class="orb-pulse-2"/>
+          <ellipse cx="200" cy="250" rx="206" ry="122" fill="none" stroke="rgba(124,58,237,0.45)" stroke-width="4" filter="url(#orb-glow)" transform="rotate(52 200 250)" class="orb-pulse-3"/>
+          <!-- Sharp layer -->
+          <ellipse id="orb1" cx="200" cy="250" rx="260" ry="76" fill="none" stroke="url(#trail-grad)" stroke-width="2" stroke-dasharray="140 860" class="orb-pulse-1 orb-trail-1"/>
+<ellipse id="orb2" cx="200" cy="250" rx="232" ry="98" fill="none" stroke="url(#trail-grad-2)" stroke-width="1.8" transform="rotate(-38 200 250)" stroke-dasharray="120 880" class="orb-pulse-2 orb-trail-2"/>
+<ellipse id="orb3" cx="200" cy="250" rx="206" ry="122" fill="none" stroke="url(#trail-grad-3)" stroke-width="1.5" transform="rotate(52 200 250)" stroke-dasharray="100 900" class="orb-pulse-3 orb-trail-3"/>
+          <!-- orbiting dots -->
+          <circle id="dot1" r="5.5" fill="#c084fc" opacity="1"/>
+          <circle id="dot2" r="4" fill="#e0b4ff" opacity="0.95"/>
+          <circle id="dot3" r="3.5" fill="#9d5ff5" opacity="0.85"/>
+          <!-- soft inner glow -->
+          <ellipse cx="200" cy="230" rx="100" ry="100" fill="url(#halo2)" opacity="0.7"/>
+        </g>
 
-        <!-- group that tilts/leans toward cursor -->
         <g class="m-head" id="m-head">
-          <!-- ears -->
           <ellipse cx="92"  cy="235" rx="26" ry="34" fill="url(#skin)"/>
           <ellipse cx="308" cy="235" rx="26" ry="34" fill="url(#skin)"/>
-          <!-- neck -->
           <rect x="165" y="330" width="70" height="70" rx="28" fill="#e8a877"/>
-          <!-- shoulders -->
           <path d="M70 460 Q200 360 330 460 Z" fill="#7c3aed"/>
-          <!-- face -->
           <ellipse cx="200" cy="225" rx="120" ry="135" fill="url(#skin)"/>
-          <!-- hair -->
           <path d="M88 200 Q90 70 200 72 Q310 70 312 200 Q300 130 200 128 Q100 130 88 200 Z" fill="#2a2a2a"/>
           <path d="M84 205 Q70 140 110 110 Q150 90 200 96 Q250 90 290 110 Q330 140 316 205 Q300 150 200 150 Q100 150 84 205 Z" fill="#1c1c1c"/>
 
-          <!-- eyebrows -->
           <g class="m-brows" id="m-brows">
             <rect x="128" y="178" width="56" height="11" rx="6" fill="#2a2a2a"/>
             <rect x="216" y="178" width="56" height="11" rx="6" fill="#2a2a2a"/>
           </g>
 
-          <!-- eyes -->
           <g class="m-eyes" id="m-eyes">
             <ellipse cx="156" cy="212" rx="30" ry="34" fill="#fff"/>
             <ellipse cx="244" cy="212" rx="30" ry="34" fill="#fff"/>
@@ -117,14 +155,11 @@
               <circle cx="161" cy="209" r="4.5" fill="#fff"/>
               <circle cx="249" cy="209" r="4.5" fill="#fff"/>
             </g>
-            <!-- blink lids -->
             <rect class="m-lid" x="126" y="176" width="60" height="0" rx="14" fill="url(#skin)"/>
             <rect class="m-lid" x="214" y="176" width="60" height="0" rx="14" fill="url(#skin)"/>
           </g>
 
-          <!-- nose -->
           <path d="M200 226 Q190 258 200 266 Q210 258 200 226" fill="#d9905f"/>
-          <!-- mouth -->
           <path d="M168 296 Q200 326 232 296" stroke="#a85e3a" stroke-width="9" fill="none" stroke-linecap="round"/>
         </g>
       </svg>
@@ -133,8 +168,6 @@
     <div class="hero-glow"></div>
   </section>
 
-
-  <!-- About -->
   <section id="about" class="section">
     <div class="section-header">
       <span class="section-num">01</span>
@@ -156,7 +189,6 @@
     </div>
   </section>
 
-  <!-- Projects -->
   <section id="projects" class="section">
     <div class="section-header">
       <span class="section-num">02</span>
@@ -193,7 +225,6 @@
     </div>
   </section>
 
-  <!-- Socials -->
   <section id="socials" class="section">
     <div class="section-header">
       <span class="section-num">03</span>
@@ -218,7 +249,6 @@
     </div>
   </section>
 
-  <!-- Files -->
   <section id="files" class="section">
     <div class="section-header">
       <span class="section-num">04</span>
@@ -234,12 +264,11 @@
     </div>
   </section>
 
-  <!-- Footer -->
   <footer>
     <span class="footer-logo">CLARK · CASH33</span>
     <span class="footer-copy">© 2025</span>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=2"></script>
 </body>
 </html>
