@@ -11,6 +11,43 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
+  <!-- ── Loading Screen ─────────────────────────── -->
+  <div id="cash-loader">
+    <canvas id="loader-canvas"></canvas>
+    <div class="loader-inner">
+      <div class="loader-logo-wrap">
+        <div class="loader-orbit"></div>
+
+        <!-- SVG arc progress ring -->
+        <svg class="loader-arc-svg" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+          <defs>
+            <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#7c3aed"/>
+              <stop offset="100%" stop-color="#c084fc"/>
+            </linearGradient>
+          </defs>
+          <circle class="loader-arc-track" cx="96" cy="96" r="90"/>
+          <circle class="loader-arc-fill"  cx="96" cy="96" r="90" id="loader-arc"/>
+        </svg>
+
+        <div class="loader-logo">
+          <img src="assets/cashpfp.png" alt="Clark" class="loader-pfp" />
+        </div>
+      </div>
+      <div class="loader-name">CLARK</div>
+      <div class="loader-tagline"><span class="tag-item">Ca$h33</span><span class="tag-sep"></span><span class="tag-item">Developer</span><span class="tag-sep"></span><span class="tag-item">Creator</span></div>
+      <div class="loader-bar-wrap">
+        <div class="loader-bar-row">
+          <div class="loader-bar-track">
+            <div class="loader-bar-fill" id="loader-bar-fill"></div>
+          </div>
+          <span class="loader-pct" id="loader-pct">0%</span>
+        </div>
+        <div class="loader-status" id="loader-status">Initializing...</div>
+      </div>
+    </div>
+  </div>
+
   <canvas id="bg-canvas"></canvas>
   <div id="cursor-ring"></div>
 
@@ -27,7 +64,7 @@
 
   <aside class="dev-portal" id="dev-portal">
     <div class="dev-portal-pill" id="dev-portal-pill">
-      <img class="dev-portal-logo" src="assets/cashpfp.jpg" alt="Clark" />
+      <img class="dev-portal-logo" src="assets/cashpfp.png" alt="Clark" />
       <div class="dev-portal-links">
         <div class="dev-portal-divider"></div>
         <a href="#" class="dev-portal-btn" title="Downloads" id="dp-downloads">

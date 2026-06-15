@@ -1,6 +1,191 @@
 console.log("TOP OF SCRIPT");
 console.log("script loaded");
 
+// ── Loading Screen ────────────────────────────────
+(() => {
+  const loader   = document.getElementById('cash-loader');
+  const bar      = document.getElementById('loader-bar-fill');
+  const pctEl    = document.getElementById('loader-pct');
+  const statusEl = document.getElementById('loader-status');
+  if (!loader || !bar) return;
+
+  // ── Particle canvas (floating dots in background) ──
+  const canvas = document.getElementById('loader-canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    let W, H, particles = [];
+    function resizeCanvas() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    for (let i = 0; i < 60; i++) {
+      particles.push({
+        x: Math.random() * (window.innerWidth  || 1920),
+        y: Math.random() * (window.innerHeight || 1080),
+        r: Math.random() * 1.8 + 0.4,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        alpha: Math.random() * 0.5 + 0.1,
+      });
+    }
+
+    let rafId;
+    function drawParticles() {
+      if (!canvas.isConnected) return;
+      ctx.clearRect(0, 0, W, H);
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(157,95,245,${p.alpha})`;
+        ctx.fill();
+      });
+      rafId = requestAnimationFrame(drawParticles);
+    }
+    drawParticles();
+  }
+
+  const messages = [
+    'Initializing...',
+    'Loading assets...',
+    'Building galaxy...',
+    'Almost there...',
+    'Welcome.'
+  ];
+
+  let current = 0;
+
+  const arcEl = document.getElementById('loader-arc');
+  const arcCircumference = 565; // 2π × r=90
+
+  function setProgress(pct) {
+    bar.style.width = pct + '%';
+    pctEl.textContent = Math.round(pct) + '%';
+    // Drive SVG arc: offset goes from full (565=empty) to 0 (full)
+    if (arcEl) {
+      arcEl.style.strokeDashoffset = arcCircumference - (arcCircumference * pct / 100);
+    }
+    const msgIdx = Math.min(Math.floor(pct / 25), messages.length - 1);
+    if (msgIdx !== current) {
+      current = msgIdx;
+      statusEl.style.opacity = '0';
+      setTimeout(() => {
+        statusEl.textContent = messages[current];
+        statusEl.style.opacity = '1';
+      }, 180);
+    }
+  }
+
+  // ── Scale + blur → lens flare → fade dismiss ───────
+  function shatterDismiss() {
+    setProgress(100);
+    statusEl.style.opacity = '0';
+    setTimeout(() => { statusEl.textContent = 'Welcome.'; statusEl.style.opacity = '1'; }, 180);
+
+    setTimeout(() => {
+      const inner = loader.querySelector('.loader-inner');
+
+      // ── Flare layer — pure circular, no oval pink ──
+      const flare = document.createElement('div');
+      flare.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 9999998;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.08s ease;
+        will-change: opacity;
+      `;
+      document.body.appendChild(flare);
+
+      // ── Step 1: content explodes outward + blurs ──
+      if (inner) {
+        inner.style.transition = 'transform 1s cubic-bezier(.2,0,.1,1), filter 1s cubic-bezier(.2,0,.1,1), opacity 0.7s ease 0.15s';
+        inner.style.transform  = 'scale(1.55)';
+        inner.style.filter     = 'blur(40px) brightness(3)';
+        inner.style.opacity    = '0';
+      }
+
+      // ── Step 2: white-purple circular burst at peak ──
+      setTimeout(() => {
+        // Perfectly circular gradient — no ellipse, no pink
+        flare.style.background = `
+          radial-gradient(circle at 50% 50%,
+            rgba(255,255,255,0.92)  0%,
+            rgba(220,200,255,0.75) 12%,
+            rgba(157,95,245,0.55)  30%,
+            rgba(124,58,237,0.25)  52%,
+            rgba(80,20,160,0.08)   70%,
+            transparent            100%)
+        `;
+        flare.style.opacity = '1';
+
+        // Immediately start fading the flare — no linger
+        requestAnimationFrame(() => {
+          flare.style.transition = 'opacity 0.6s cubic-bezier(.4,0,.2,1)';
+          flare.style.opacity    = '0';
+        });
+      }, 380);
+
+      // ── Step 3: fade loader bg out behind the flare ──
+      setTimeout(() => {
+        loader.classList.add('loader-done');
+      }, 520);
+
+      // ── Cleanup ──
+      setTimeout(() => flare.remove(), 1400);
+
+    }, 650);
+  }
+
+  // ── 60fps rAF progress simulation — realistic ~4s pace ──
+  let simPct = 0;
+  let simRunning = true;
+  let lastSimTime = 0;
+  let simRaf;
+
+  function simStep(ts) {
+    if (!simRunning) return;
+    const dt = Math.min(ts - lastSimTime, 50); // cap to avoid jump after tab switch
+    lastSimTime = ts;
+    // Eases hard as it approaches 82 — natural loading feel
+    const ease = Math.max(0.04, 1 - Math.pow(simPct / 80, 2.8));
+    simPct += (dt * 0.018) * ease;
+    simPct = Math.min(simPct, 82);
+    setProgress(simPct);
+    simRaf = requestAnimationFrame(simStep);
+  }
+  simRaf = requestAnimationFrame(ts => { lastSimTime = ts; simStep(ts); });
+
+  function onLoaded() {
+    simRunning = false;
+    cancelAnimationFrame(simRaf);
+    const startPct = simPct;
+    const startTime = performance.now();
+    const duration = 1100; // smooth 1.1s coast to 100%
+    function fillStep(ts) {
+      const t = Math.min(1, (ts - startTime) / duration);
+      const eased = t < 1 ? 1 - Math.pow(1 - t, 3) : 1;
+      setProgress(startPct + (100 - startPct) * eased);
+      if (t < 1) requestAnimationFrame(fillStep);
+      else shatterDismiss();
+    }
+    requestAnimationFrame(fillStep);
+  }
+
+  if (document.readyState === 'complete') {
+    setTimeout(onLoaded, 4500);
+  } else {
+    window.addEventListener('load', () => setTimeout(onLoaded, 2000), { once: true });
+    setTimeout(onLoaded, 12000);
+  }
+})();
+
 // ── Page indicator (capsule scroll fill) ──────────
 (() => {
   const fill = document.getElementById('page-nav-fill');
