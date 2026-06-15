@@ -1,6 +1,26 @@
 console.log("TOP OF SCRIPT");
 console.log("script loaded");
 
+// ── Page indicator (capsule scroll fill) ──────────
+(() => {
+  const fill = document.getElementById('page-nav-fill');
+  if (!fill) return;
+
+  function update() {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docHeight > 0 ? (scrollTop / docHeight) : 0;
+    // scaleY is compositor-only (no layout), height triggers layout
+    fill.style.transform = `scaleY(${Math.min(1, Math.max(0, pct)).toFixed(4)})`;
+  }
+
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+})();
+
+
+
 // ── Scramble role text ────────────────────────────
 (() => {
   const el = document.getElementById('scramble-role');
@@ -75,7 +95,7 @@ document.querySelectorAll('.section').forEach(s => headingObs.observe(s));
 const fadeGroups = [
   document.querySelectorAll('.card'),
   document.querySelectorAll('.social-card'),
-  document.querySelectorAll('.file-item'),
+  document.querySelectorAll('.contact-info-row'),
   document.querySelectorAll('.section-sub'),
 ];
 const fadeObs = new IntersectionObserver((entries) => {
@@ -220,10 +240,13 @@ fadeGroups.forEach(group => {
 
   let tx = 0, ty = 0, cx = 0, cy = 0, isMoving = false, moveTimer = null;
 
+  // Cache rect — only update on resize, not every mousemove
+  let _memojiRect = memoji.getBoundingClientRect();
+  window.addEventListener('resize', () => { _memojiRect = memoji.getBoundingClientRect(); }, { passive: true });
+
   window.addEventListener('mousemove', (e) => {
-    const r  = memoji.getBoundingClientRect();
-    const ox = r.left + r.width  / 2;
-    const oy = r.top  + r.height / 2;
+    const ox = _memojiRect.left + _memojiRect.width  / 2;
+    const oy = _memojiRect.top  + _memojiRect.height / 2;
     tx = Math.max(-1, Math.min(1, (e.clientX - ox) / (window.innerWidth  / 2)));
     ty = Math.max(-1, Math.min(1, (e.clientY - oy) / (window.innerHeight / 2)));
     isMoving = true;
@@ -233,8 +256,8 @@ fadeGroups.forEach(group => {
 
   // Exposed so the master loop can call it
   window._memojiTick = function() {
-    cx += (tx - cx) * 0.12;
-    cy += (ty - cy) * 0.12;
+    cx += (tx - cx) * 0.10;
+    cy += (ty - cy) * 0.10;
     head.setAttribute('transform', `translate(${cx * 22} ${cy * 16}) rotate(${cx * 7} 200 260)`);
     eyes.setAttribute('transform',   `translate(${cx * 8} ${cy * 7})`);
     pupils.setAttribute('transform', `translate(${cx * 12} ${cy * 11})`);
@@ -269,10 +292,11 @@ fadeGroups.forEach(group => {
     { el: dot3, orb: 'orb3', rx: 206, ry: 122, tiltX: 55, tiltZ: 52,  angle: 4.2, speed: 0.006,  baseR: 3.5 },
   ];
 
+  let _orbitRect = document.getElementById('memoji').getBoundingClientRect();
+  window.addEventListener('resize', () => { _orbitRect = document.getElementById('memoji').getBoundingClientRect(); }, { passive: true });
   window.addEventListener('mousemove', (e) => {
-    const r = document.getElementById('memoji').getBoundingClientRect();
-    tiltX = Math.max(-1, Math.min(1, (e.clientX - r.left - r.width/2) / (window.innerWidth/2)));
-    tiltY = Math.max(-1, Math.min(1, (e.clientY - r.top - r.height/2) / (window.innerHeight/2)));
+    tiltX = Math.max(-1, Math.min(1, (e.clientX - _orbitRect.left - _orbitRect.width/2) / (window.innerWidth/2)));
+    tiltY = Math.max(-1, Math.min(1, (e.clientY - _orbitRect.top - _orbitRect.height/2) / (window.innerHeight/2)));
   }, { passive: true });
 
   function project(x, y, z, rotY, rotX) {
@@ -331,16 +355,23 @@ fadeGroups.forEach(group => {
     }
   });
 
+  let _lastRotY = null, _lastRotX = null;
   window._orbitTick = function() {
-    smoothX += (tiltX - smoothX) * 0.05;
-    smoothY += (tiltY - smoothY) * 0.05;
+    smoothX += (tiltX - smoothX) * 0.07;
+    smoothY += (tiltY - smoothY) * 0.07;
     const rotY = smoothX * 0.5;
     const rotX = 1.1 + smoothY * 0.35;
 
+    // Only rebuild paths if tilt changed meaningfully
+    const pathDirty = _lastRotY === null || Math.abs(rotY - _lastRotY) > 0.001 || Math.abs(rotX - _lastRotX) > 0.001;
+    if (pathDirty) { _lastRotY = rotY; _lastRotX = rotX; }
+
     ringDefs.forEach(ring => {
-      const d = buildPath(ring.rx, ring.ry, ring.tiltX, ring.tiltZ, rotY, rotX);
-      if (ring.sharpPath) ring.sharpPath.setAttribute('d', d);
-      if (ring.glowPath)  ring.glowPath.setAttribute('d', d);
+      if (pathDirty) {
+        const d = buildPath(ring.rx, ring.ry, ring.tiltX, ring.tiltZ, rotY, rotX);
+        if (ring.sharpPath) ring.sharpPath.setAttribute('d', d);
+        if (ring.glowPath)  ring.glowPath.setAttribute('d', d);
+      }
       ring.angle += ring.speed;
       const txR = ring.tiltX * Math.PI / 180;
       const tzR = ring.tiltZ * Math.PI / 180;
@@ -365,7 +396,7 @@ fadeGroups.forEach(group => {
 (() => {
   const ring      = document.getElementById('cursor-ring');
   const navEl     = document.querySelector('nav');
-  const sidebarEl = document.querySelector('.socials-pill');
+  const sidebarEl = document.querySelector('.dev-portal-pill');
   let mx = window.innerWidth / 2, my = window.innerHeight / 2;
   let rx = mx, ry = my;
   let locked = false;
@@ -373,9 +404,9 @@ fadeGroups.forEach(group => {
   window.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; if (!locked) ring.style.opacity = '1'; }, { passive: true });
 
   window._cursorTick = function() {
-    rx += (mx - rx) * 0.18;
-    ry += (my - ry) * 0.18;
-    if (!locked) { ring.style.left = rx + 'px'; ring.style.top = ry + 'px'; }
+    rx += (mx - rx) * 0.22;
+    ry += (my - ry) * 0.22;
+    if (!locked) { ring.style.transform = `translate(calc(${rx}px - 50%), calc(${ry}px - 50%))`; }
   };
 
 
@@ -389,23 +420,21 @@ fadeGroups.forEach(group => {
     const cy = r.top  + r.height / 2;
     locked = true;
     ring.style.transition = 'none';
-    ring.style.left = rx + 'px';
-    ring.style.top  = ry + 'px';
+    ring.style.transform = `translate(calc(${rx}px - 50%), calc(${ry}px - 50%))`;
     requestAnimationFrame(() => {
       ring.classList.add('nav-merge');
       ring.classList.remove('clicking', 'hovering');
       ring.style.transition =
-        'left 0.55s cubic-bezier(.22,1,.36,1), top 0.55s cubic-bezier(.22,1,.36,1), ' +
+        'transform 0.55s cubic-bezier(.22,1,.36,1), ' +
         'width 0.55s cubic-bezier(.22,1,.36,1), height 0.55s cubic-bezier(.22,1,.36,1), ' +
-        'border-radius 0.55s cubic-bezier(.22,1,.36,1), opacity 0.45s ease, filter 0.45s ease, background 0.35s ease';
-      ring.style.left   = cx + 'px';
-      ring.style.top    = cy + 'px';
+        'border-radius 0.55s cubic-bezier(.22,1,.36,1), opacity 0.2s ease, filter 0.45s ease, background 0.35s ease';
+      ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
       ring.style.width  = r.width  + 'px';
       ring.style.height = r.height + 'px';
+      ring.style.opacity = '0';
       targetEl.classList.add('absorbing');
       clearTimeout(clearRef[0]);
       clearRef[0] = setTimeout(() => targetEl.classList.remove('absorbing'), 600);
-      setTimeout(() => { ring.style.transition += ', opacity 0.3s ease 0.15s'; ring.style.opacity = '0'; }, 200);
     });
   }
 
@@ -413,15 +442,16 @@ fadeGroups.forEach(group => {
     locked = false;
     ring.classList.remove('nav-merge');
     const r = targetEl.getBoundingClientRect();
+    const cx = r.left + r.width  / 2;
+    const cy = r.top  + r.height / 2;
     ring.style.transition = 'none';
-    ring.style.left = (r.left + r.width  / 2) + 'px';
-    ring.style.top  = (r.top  + r.height / 2) + 'px';
+    ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
     ring.style.width = r.width + 'px';
     ring.style.height = r.height + 'px';
     ring.style.borderRadius = '999px';
     ring.style.opacity = '0.6';
     requestAnimationFrame(() => {
-      ring.style.transition = 'width 0.4s cubic-bezier(.22,1,.36,1), height 0.4s cubic-bezier(.22,1,.36,1), border-radius 0.4s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, filter 0.4s ease, background 0.35s ease';
+      ring.style.transition = 'transform 0.4s cubic-bezier(.22,1,.36,1), width 0.4s cubic-bezier(.22,1,.36,1), height 0.4s cubic-bezier(.22,1,.36,1), border-radius 0.4s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, filter 0.4s ease, background 0.35s ease';
       ring.style.width = '56px'; ring.style.height = '56px';
       ring.style.borderRadius = '50%'; ring.style.opacity = '1';
     });
@@ -430,8 +460,60 @@ fadeGroups.forEach(group => {
   if (navEl) { const r=[null]; navEl.addEventListener('mouseenter', () => mergeInto(navEl, r)); navEl.addEventListener('mouseleave', () => burstOut(navEl)); }
   if (sidebarEl) { const r=[null]; sidebarEl.addEventListener('mouseenter', () => mergeInto(sidebarEl, r)); sidebarEl.addEventListener('mouseleave', () => burstOut(sidebarEl)); }
 
+  // ── Social cards + big preview: merge with no glow ──
+  function mergeIntoCard(targetEl) {
+    const r  = targetEl.getBoundingClientRect();
+    const cx = r.left + r.width  / 2;
+    const cy = r.top  + r.height / 2;
+    locked = true;
+    ring.style.transition = 'none';
+    ring.style.transform = `translate(calc(${rx}px - 50%), calc(${ry}px - 50%))`;
+    ring.style.background = 'transparent';
+    ring.style.boxShadow  = 'none';
+    ring.style.filter     = 'none';
+    requestAnimationFrame(() => {
+      ring.classList.remove('nav-merge', 'clicking', 'hovering');
+      ring.classList.add('card-merge');
+      ring.style.transition =
+        'transform 0.55s cubic-bezier(.22,1,.36,1), ' +
+        'width 0.55s cubic-bezier(.22,1,.36,1), height 0.55s cubic-bezier(.22,1,.36,1), ' +
+        'border-radius 0.55s cubic-bezier(.22,1,.36,1), opacity 0.15s ease';
+      ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+      ring.style.width  = r.width  + 'px';
+      ring.style.height = r.height + 'px';
+      ring.style.opacity = '0';
+    });
+  }
+
+  function burstOutCard(targetEl) {
+    locked = false;
+    ring.classList.remove('card-merge');
+    const r = targetEl.getBoundingClientRect();
+    const cx = r.left + r.width  / 2;
+    const cy = r.top  + r.height / 2;
+    ring.style.transition = 'none';
+    ring.style.background = '';
+    ring.style.boxShadow  = '';
+    ring.style.filter     = '';
+    ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+    ring.style.width = r.width + 'px';
+    ring.style.height = r.height + 'px';
+    ring.style.borderRadius = '999px';
+    ring.style.opacity = '0';
+    requestAnimationFrame(() => {
+      ring.style.transition = 'transform 0.4s cubic-bezier(.22,1,.36,1), width 0.4s cubic-bezier(.22,1,.36,1), height 0.4s cubic-bezier(.22,1,.36,1), border-radius 0.4s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, filter 0.4s ease, background 0.35s ease';
+      ring.style.width = '56px'; ring.style.height = '56px';
+      ring.style.borderRadius = '50%'; ring.style.opacity = '1';
+    });
+  }
+
+  document.querySelectorAll('.social-card').forEach(card => {
+    card.addEventListener('mouseenter', () => mergeIntoCard(card));
+    card.addEventListener('mouseleave', () => burstOutCard(card));
+  });
+
   // Expose so other elements can hook in
-  window._cursorMerge = { mergeInto, burstOut, ring, getLocked: () => locked, _setLocked: (v) => { locked = v; } };
+  window._cursorMerge = { mergeInto, burstOut, mergeIntoCard, burstOutCard, ring, getLocked: () => locked, _setLocked: (v) => { locked = v; } };
 
   window.addEventListener('mousedown', () => { if (!locked) ring.classList.add('clicking'); });
   window.addEventListener('mouseup',   () => ring.classList.remove('clicking'));
@@ -474,14 +556,12 @@ fadeGroups.forEach(group => {
 
         requestAnimationFrame(() => {
           ring.style.transition =
-            'left 0.45s cubic-bezier(.22,1,.36,1),' +
-            'top 0.45s cubic-bezier(.22,1,.36,1),' +
+            'transform 0.45s cubic-bezier(.22,1,.36,1),' +
             'width 0.45s cubic-bezier(.22,1,.36,1),' +
             'height 0.45s cubic-bezier(.22,1,.36,1),' +
             'border-radius 0.45s cubic-bezier(.22,1,.36,1),' +
             'opacity 0.3s ease';
-          ring.style.left         = cx + 'px';
-          ring.style.top          = cy + 'px';
+          ring.style.transform    = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
           ring.style.width        = w  + 'px';
           ring.style.height       = h  + 'px';
           ring.style.borderRadius = '12px';
@@ -504,9 +584,10 @@ fadeGroups.forEach(group => {
         ring.style.boxShadow = '';
 
         const pr = panel.getBoundingClientRect();
+        const pcx = pr.left + pr.width  / 2;
+        const pcy = pr.top  + pr.height / 2;
         ring.style.transition   = 'none';
-        ring.style.left         = (pr.left + pr.width  / 2) + 'px';
-        ring.style.top          = (pr.top  + pr.height / 2) + 'px';
+        ring.style.transform    = `translate(calc(${pcx}px - 50%), calc(${pcy}px - 50%))`;
         ring.style.width        = pr.width  + 'px';
         ring.style.height       = pr.height + 'px';
         ring.style.borderRadius = '12px';
@@ -514,6 +595,7 @@ fadeGroups.forEach(group => {
 
         requestAnimationFrame(() => {
           ring.style.transition =
+            'transform 0.38s cubic-bezier(.22,1,.36,1),' +
             'width 0.38s cubic-bezier(.22,1,.36,1),' +
             'height 0.38s cubic-bezier(.22,1,.36,1),' +
             'border-radius 0.38s cubic-bezier(.22,1,.36,1),' +
@@ -552,13 +634,11 @@ fadeGroups.forEach(group => {
       ring.style.transition = 'none';
       requestAnimationFrame(() => {
         ring.style.transition =
-          'left 0.4s cubic-bezier(.22,1,.36,1),' +
-          'top 0.4s cubic-bezier(.22,1,.36,1),' +
+          'transform 0.4s cubic-bezier(.22,1,.36,1),' +
           'width 0.4s cubic-bezier(.22,1,.36,1),' +
           'height 0.4s cubic-bezier(.22,1,.36,1),' +
           'opacity 0.35s ease, filter 0.35s ease';
-        ring.style.left = cx + 'px';
-        ring.style.top = cy + 'px';
+        ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
         ring.style.width = '20px';
         ring.style.height = '20px';
         ring.style.opacity = '0';
@@ -570,14 +650,14 @@ fadeGroups.forEach(group => {
       ring.classList.remove('sphere-merge');
 
       ring.style.transition = 'none';
-      ring.style.left = e.clientX + 'px';
-      ring.style.top = e.clientY + 'px';
+      ring.style.transform = `translate(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%))`;
       ring.style.width = '20px';
       ring.style.height = '20px';
       ring.style.opacity = '0';
 
       requestAnimationFrame(() => {
         ring.style.transition =
+          'transform 0.35s cubic-bezier(.22,1,.36,1),' +
           'width 0.35s cubic-bezier(.22,1,.36,1),' +
           'height 0.35s cubic-bezier(.22,1,.36,1),' +
           'opacity 0.3s ease';
@@ -596,7 +676,7 @@ fadeGroups.forEach(group => {
 // ── Galaxy background ─────────────────────────────
 (() => {
   const canvas = document.getElementById('bg-canvas');
-  const ctx    = canvas.getContext('2d');
+  const ctx    = canvas.getContext('2d', { willReadFrequently: false });
   let W, H, mx = -999, my = -999, tmx = 0, tmy = 0;
   let stars = [], meteors = [], dots = [];
   let cols, rows;
@@ -625,7 +705,8 @@ fadeGroups.forEach(group => {
       const alpha = s.base + Math.sin(t * s.spd + s.ph) * 0.25;
       const dx = tmx - s.x, dy = tmy - s.y;
       const distSq = dx * dx + dy * dy;
-      const boost = distSq < 32400 ? Math.max(0, 1 - Math.sqrt(distSq) / 180) * 0.7 : 0; // skip sqrt unless close
+      // Avoid sqrt — use squared threshold (180^2 = 32400)
+      const boost = distSq < 32400 ? Math.max(0, 1 - distSq / 32400) * 0.7 : 0;
       const a = Math.min(1, alpha + boost);
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r + boost * 1.2, 0, Math.PI * 2);
@@ -636,7 +717,7 @@ fadeGroups.forEach(group => {
 
   function spawnMeteor() {
     meteors.push({ x: Math.random() * W, y: Math.random() * H * 0.5, len: Math.random() * 160 + 80, speed: Math.random() * 6 + 3, opacity: 1, angle: Math.PI / 4 });
-    setTimeout(spawnMeteor, Math.random() * 4000 + 2000);
+    setTimeout(spawnMeteor, Math.random() * 15000 + 10000);
   }
 
   function drawMeteors() {
@@ -701,14 +782,20 @@ fadeGroups.forEach(group => {
   }
 
   function resize() {
-    W = canvas.width  = window.innerWidth;
-    H = canvas.height = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.scale(dpr, dpr);
     initStars(); initGrid(); gridDirty = true;
   }
 
   window._bgTick = function(t) {
-    tmx += (mx - tmx) * 0.06;
-    tmy += (my - tmy) * 0.06;
+    tmx += (mx - tmx) * 0.09;
+    tmy += (my - tmy) * 0.09;
     ctx.clearRect(0, 0, W, H);
     drawGrid();
     drawStars(t);
@@ -898,19 +985,35 @@ fadeGroups.forEach(group => {
 })();
 
 // ── MASTER RAF LOOP ───────────────────────────────
-// Single rAF drives everything — no more 4 competing loops
+// Single rAF drives everything — no competing loops
 let _rafPaused = false;
 document.addEventListener('visibilitychange', () => { _rafPaused = document.hidden; });
+
+// Track which sections are in view to skip off-screen ticks
+let _heroVisible = true, _aboutVisible = false;
+const _heroEl = document.getElementById('hero');
+const _aboutEl = document.getElementById('about');
+if (_heroEl) {
+  new IntersectionObserver(e => { _heroVisible = e[0].isIntersecting; }, { threshold: 0 }).observe(_heroEl);
+}
+if (_aboutEl) {
+  new IntersectionObserver(e => { _aboutVisible = e[0].isIntersecting; }, { threshold: 0 }).observe(_aboutEl);
+}
 
 (function masterLoop(t) {
   if (!_rafPaused) {
     if (window._bgTick)     window._bgTick(t);
-    if (window._memojiTick) window._memojiTick();
-    if (window._orbitTick)  window._orbitTick();
     if (window._cursorTick) window._cursorTick();
-    if (window._heroTick)   window._heroTick();
-    if (window._beltTick)   window._beltTick();
-    if (window._sphereTick) window._sphereTick();
+    // Only run hero-section ticks when hero is visible
+    if (_heroVisible) {
+      if (window._memojiTick) window._memojiTick();
+      if (window._orbitTick)  window._orbitTick();
+      if (window._heroTick)   window._heroTick();
+    }
+    // Sphere only runs when about section is visible
+    if (_aboutVisible && window._sphereTick) window._sphereTick();
+    // Belt always runs (lightweight when idle)
+    if (window._beltTick) window._beltTick();
   }
   requestAnimationFrame(masterLoop);
 })(0);
@@ -1002,8 +1105,23 @@ document.querySelectorAll('.nav-links a, .nav-logo').forEach(el => {
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
     e.preventDefault();
-    document.querySelector(a.getAttribute('href'))
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = document.querySelector(a.getAttribute('href'));
+    if (!target) return;
+    const header = target.querySelector('.section-header') || target;
+    const NAV_CLEARANCE = 130; // px gap to leave below the fixed nav
+
+    // Walk up offsetParent chain to get the true layout position,
+    // unaffected by transform-based reveal animations (translateY, etc).
+    let top = 0;
+    let el = header;
+    while (el) {
+      top += el.offsetTop;
+      el = el.offsetParent;
+    }
+
+    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    const target_y = Math.min(maxScroll, Math.max(0, top - NAV_CLEARANCE));
+    window.scrollTo({ top: target_y, behavior: 'smooth' });
   });
 });
 
@@ -1040,10 +1158,10 @@ if (aboutSection) aboutObserver.observe(aboutSection);
       if (e.intersectionRatio >= 0.3) {
         about.style.opacity = '1';
         about.style.transform = 'translateY(0)';
-        about.style.filter = 'drop-shadow(0 0 28px rgba(180,100,255,0.3))';
+        about.style.filter = '';
 
         setTimeout(() => {
-          about.style.filter = 'drop-shadow(0 0 0 rgba(180,100,255,0))';
+          about.style.filter = '';
         }, 1400);
       } else {
         about.style.opacity = '0';
@@ -1337,14 +1455,64 @@ window.addEventListener('mousemove', e => {
 
 // ── Work Belt ─────────────────────────────────────
 (() => {
-  const CARDS=6, RADIUS=340, IDLE_SPEED=0.0018;
+  const CARDS=6, RADIUS=430, IDLE_SPEED=0.0015;
   const track=document.getElementById('belt-track'), hint=document.getElementById('belt-hint');
   if (!track) return;
 
   const labels=['006','001','002','003','004','005'];
+
+  const PROJECTS = {
+    '001': {
+      title: 'Point of System (POS)',
+      image: 'assets/project-pos.png',
+      type: 'Desktop App',
+      status: 'Completed',
+      desc: 'A desktop point-of-sale application featuring secure role-based access, real-time inventory management, transaction tracking, and automated receipt generation — built for efficient retail operations.',
+      tags: ['Java','Swing','JDBC','MySQL','NetBeans']
+    }
+  };
+
   const cardEls=labels.map(num=>{
     const wrap=document.createElement('div'); wrap.className='belt-card';
-    wrap.innerHTML=`<div class="belt-card-face"><div class="belt-scan-line"></div><span class="belt-card-num">${num}</span><div class="belt-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg></div><span class="belt-card-label">EMPTY SLOT</span></div>`;
+    const proj = PROJECTS[num];
+    if (proj) {
+      const tagsHtml = proj.tags.map(t=>`<span class="belt-tag">${t}</span>`).join('');
+      wrap.innerHTML=`<div class="belt-card-face belt-card-face--project">
+        <div class="belt-card-corner-tl"></div>
+        <div class="belt-card-image" style="background-image:url('${proj.image}')">
+          <span class="belt-card-status"><span class="belt-status-dot"></span>${proj.status}</span>
+        </div>
+        <div class="belt-card-content">
+          <div class="belt-card-header">
+            <h3 class="belt-card-title">${proj.title}</h3>
+            <span class="belt-card-type">${proj.type}</span>
+          </div>
+          <div class="belt-card-divider"></div>
+          <p class="belt-card-desc">${proj.desc}</p>
+          <div class="belt-card-tags">${tagsHtml}</div>
+        </div>
+      </div>`;
+    } else {
+      wrap.innerHTML=`<div class="belt-card-face belt-card-face--empty">
+        <div class="belt-empty-top">
+          <span class="belt-empty-num">${num}</span>
+          <span class="belt-empty-badge">COMING SOON</span>
+        </div>
+        <div class="belt-empty-body">
+          <div class="belt-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <path d="M8 12h8M12 8v8"/>
+            </svg>
+          </div>
+          <p class="belt-empty-title">Next Project</p>
+          <p class="belt-empty-sub">Something's brewing.<br>Check back soon.</p>
+        </div>
+        <div class="belt-empty-footer">
+          <div class="belt-empty-dots"><span></span><span></span><span></span></div>
+        </div>
+      </div>`;
+    }
     track.appendChild(wrap); return wrap;
   });
 
@@ -1378,18 +1546,32 @@ window.addEventListener('mousemove', e => {
   }
 
   function place() {
-    const step=(Math.PI*2)/CARDS, FADE_START=310, FADE_END=410;
+    const step=(Math.PI*2)/CARDS, FADE_START=400, FADE_END=510;
+    let frontIdx=-1, maxZ=-Infinity;
+    const data=cardEls.map((card,i)=>{
+      const a=angle-step*i, x=Math.sin(a)*RADIUS, z=Math.cos(a)*RADIUS;
+      if(z>maxZ){ maxZ=z; frontIdx=i; }
+      return {x,z};
+    });
     cardEls.forEach((card,i)=>{
-      const a=angle-step*i, x=Math.sin(a)*RADIUS, z=Math.cos(a)*RADIUS, t=(z+RADIUS)/(RADIUS*2);
-      const isFront=z>RADIUS*0.85;
-      const scaleVal=isFront?(0.68+0.32*t)*1.12:(0.68+0.32*t)*0.96;
-      const absX=Math.abs(x), edgeFade=absX<FADE_START?1:absX>FADE_END?0:1-(absX-FADE_START)/(FADE_END-FADE_START);
-      card.style.transform=`translate3d(${x}px,0,${z}px) scale(${scaleVal.toFixed(3)})`;
-      card.style.opacity=(((0.35+0.65*t)*edgeFade)).toFixed(3);
-      card.style.filter=isFront?'brightness(1.15)':'brightness(0.85)';
-      card.style.zIndex=Math.round(z+RADIUS);
-      card.classList.toggle('card-active',z>RADIUS*0.55);
-      card.classList.toggle('card-front',z>RADIUS*0.85);
+      const {x,z}=data[i];
+      const t=(z+RADIUS)/(RADIUS*2);
+      const isFront=i===frontIdx;
+      const isActive=z>RADIUS*0.5;
+      const scale=0.72+0.28*t;
+      const absX=Math.abs(x);
+      const edgeFade=absX<FADE_START?1:absX>FADE_END?0:1-(absX-FADE_START)/(FADE_END-FADE_START);
+      const rawOpacity=0.28+0.72*t;
+      const opacity=Math.max(0.72, rawOpacity)*edgeFade;
+      // Only write if changed — avoids unnecessary style recalcs
+      const newTx = `translateX(${Math.round(x)}px) scale(${scale.toFixed(3)})`;
+      if (card._lastTx !== newTx) { card.style.transform = newTx; card._lastTx = newTx; }
+      const newOp = opacity.toFixed(3);
+      if (card._lastOp !== newOp) { card.style.opacity = newOp; card._lastOp = newOp; }
+      const newZ = Math.round(t*100);
+      if (card._lastZ !== newZ) { card.style.zIndex = newZ; card._lastZ = newZ; }
+      if(card._isFront!==isFront){ card._isFront=isFront; card.classList.toggle('card-front',isFront); }
+      if(card._isActive!==isActive){ card._isActive=isActive; card.classList.toggle('card-active',isActive); }
     });
   }
 
@@ -1801,7 +1983,16 @@ input.addEventListener('blur', () => {
   function animateStat(el, rawVal) {
     if (!el) return;
     const match = String(rawVal).match(/^(\D*)([\d,.]+)(\D*)$/);
-    if (!match) { el.textContent = rawVal; return; }
+    if (!match) {
+      el.textContent = rawVal;
+      if (String(rawVal).length > 5) el.classList.add('stat-val--long');
+      if (String(rawVal).toUpperCase() === 'FREE') {
+        el.classList.add('stat-val--free');
+        el.classList.add('stat-pop');
+        setTimeout(() => el.classList.remove('stat-pop'), 250);
+      }
+      return;
+    }
     const [, prefix, numStr, suffix] = match;
     const target = parseFloat(numStr.replace(/,/g, ''));
     const decimals = numStr.includes('.') ? numStr.split('.')[1].length : 0;
@@ -1846,7 +2037,6 @@ input.addEventListener('blur', () => {
 
       livePanel.innerHTML = `
         <div class="sc-bp-banner">
-          <span class="sc-bp-enhanced">ENHANCED</span>
           <div class="sc-bp-dots"><span></span><span></span><span></span></div>
         </div>
         <div class="sc-bp-body">
@@ -1864,7 +2054,7 @@ input.addEventListener('blur', () => {
               </div>
             `).join('')}
           </div>
-          <div class="sc-bp-cta">${data.cta || 'VISIT PROFILE'} <span class="sc-bp-cta-arrow">↗</span></div>
+          <a class="sc-bp-cta" href="${card.getAttribute('href') || '#'}" target="${card.getAttribute('target') || '_self'}" rel="noopener">${data.cta || 'VISIT PROFILE'} <span class="sc-bp-cta-arrow">↗</span></a>
         </div>
       `;
       [1,2,3].forEach(i => animateStat(livePanel.querySelector(`#bp-stat-${i}`), data[`stat${i}Val`]));
@@ -1874,13 +2064,22 @@ input.addEventListener('blur', () => {
       if (!isDesktop()) return;
       clearTimeout(hideTimer);
       fillBigPreview(card);
+
+      // align the panel's grow origin to the hovered card's position
+      const cardRect = card.getBoundingClientRect();
+      const panelRect = bigPreview.getBoundingClientRect();
+      const originY = cardRect.top + cardRect.height / 2 - panelRect.top;
+      // negative X pulls the origin point back toward the card (left of the panel)
+      const originX = cardRect.right - panelRect.left;
+      bigPreview.style.transformOrigin = `${originX}px ${originY}px`;
+
       requestAnimationFrame(() => stage.classList.add('sc-preview-visible'));
     }
 
     function deactivate() {
       hideTimer = setTimeout(() => {
         stage.classList.remove('sc-preview-visible');
-      }, 120);
+      }, 250);
     }
 
     document.querySelectorAll('.social-card').forEach(card => {
@@ -1889,7 +2088,21 @@ input.addEventListener('blur', () => {
       card.addEventListener('mouseleave', deactivate);
     });
 
+    bigPreview.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+    bigPreview.addEventListener('mouseleave', deactivate);
+
+    // cursor merge into big preview — no glow
+    bigPreview.addEventListener('mouseenter', () => {
+      const cm = window._cursorMerge;
+      if (cm) cm.mergeIntoCard(bigPreview);
+    });
+    bigPreview.addEventListener('mouseleave', () => {
+      const cm = window._cursorMerge;
+      if (cm) cm.burstOutCard(bigPreview);
+    });
+
     stage.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+    stage.addEventListener('mouseleave', deactivate);
   })();
 
   // ── Mobile: small popup near the card (original behavior) ──
@@ -1902,7 +2115,6 @@ input.addEventListener('blur', () => {
       el.className = 'sc-popup';
       el.innerHTML = `
         <div class="sc-popup-banner">
-          <span class="sc-popup-enhanced">ENHANCED</span>
           <div class="sc-popup-dots"><span></span><span></span><span></span></div>
         </div>
         <div class="sc-popup-body">
@@ -2003,3 +2215,251 @@ input.addEventListener('blur', () => {
 })();
 
 console.log("BOTTOM OF SCRIPT");
+
+// ── Contact Modal + EmailJS ───────────────────────
+(() => {
+  // Copy email on pill click
+  const emailPill = document.getElementById('contact-email-pill');
+  if (emailPill) {
+    const copyLabel = emailPill.querySelector('.contact-email-copy-label');
+    let hasCopied = false;
+
+    emailPill.addEventListener('click', () => {
+      navigator.clipboard.writeText('justinclark.mendoza.official@gmail.com').then(() => {
+        hasCopied = true;
+        emailPill.classList.add('copied');
+        if (copyLabel) copyLabel.textContent = 'Copied ✓';
+      });
+    });
+
+    emailPill.addEventListener('mouseleave', () => {
+      if (hasCopied) {
+        hasCopied = false;
+        emailPill.classList.remove('copied');
+        if (copyLabel) copyLabel.textContent = 'Copy Email';
+      }
+    });
+  }
+
+  emailjs.init('dPSQYIqp80gXI_eSg');
+
+  const overlay   = document.getElementById('contact-modal');
+  const openBtn   = document.getElementById('contact-open-btn');
+  const closeBtn  = document.getElementById('contact-close-btn');
+  const submitBtn = document.getElementById('contact-submit-btn');
+  const submitTxt = document.getElementById('contact-submit-text');
+  const statusMsg = document.getElementById('contact-status-msg');
+  if (!overlay || !openBtn) return;
+
+  function openModal() {
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('cf-name')?.focus(), 350);
+  }
+
+  function closeModal() {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    statusMsg.textContent = '';
+    statusMsg.className = 'contact-status-msg';
+  }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  submitBtn.addEventListener('click', () => {
+    const name    = document.getElementById('cf-name').value.trim();
+    const email   = document.getElementById('cf-email').value.trim();
+    const subject = document.getElementById('cf-subject').value.trim();
+    const message = document.getElementById('cf-message').value.trim();
+
+    if (!name || !email || !subject || !message) {
+      statusMsg.textContent = '⚠ Fill in all fields.';
+      statusMsg.className = 'contact-status-msg error';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitTxt.textContent = 'SENDING...';
+    statusMsg.textContent = '';
+    statusMsg.className = 'contact-status-msg';
+
+    emailjs.send('service_yq0j4o8', 'template_azu6blt', {
+      from_name:    name,
+      from_email:   email,
+      subject:      subject,
+      message:      message,
+    }).then(() => {
+      statusMsg.textContent = '✓ Message sent. I\'ll get back to you soon.';
+      statusMsg.className = 'contact-status-msg success';
+      submitTxt.textContent = 'SEND';
+      submitBtn.disabled = false;
+      document.getElementById('cf-name').value = '';
+      document.getElementById('cf-email').value = '';
+      document.getElementById('cf-subject').value = '';
+      document.getElementById('cf-message').value = '';
+    }).catch(() => {
+      statusMsg.textContent = '✕ Failed to send. Try emailing directly.';
+      statusMsg.className = 'contact-status-msg error';
+      submitTxt.textContent = 'SEND';
+      submitBtn.disabled = false;
+    });
+  });
+})();
+// ── Scroll Reveal: fade + scale, staggered ────────
+(function () {
+  const els = document.querySelectorAll('.reveal');
+  if (!els.length) return;
+
+  const map = new Map();
+  els.forEach(el => {
+    const sec = el.closest('section, aside') || document.body;
+    if (!map.has(sec)) map.set(sec, []);
+    map.get(sec).push(el);
+  });
+
+  map.forEach(group => {
+    group.forEach((el, i) => {
+      el.style.transitionDelay = `${i * 90}ms`;
+    });
+  });
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  els.forEach(el => io.observe(el));
+})();
+
+// ── Contact: Cursor Merge (same system as nav/sidebar) ───────
+(() => {
+  requestAnimationFrame(() => {
+    const cm = window._cursorMerge;
+    if (!cm) return;
+    const { ring, _setLocked } = cm;
+
+    function mergeIntoContact(targetEl) {
+      const r  = targetEl.getBoundingClientRect();
+      const cx = r.left + r.width  / 2;
+      const cy = r.top  + r.height / 2;
+      _setLocked(true);
+      ring.style.transition = 'none';
+      requestAnimationFrame(() => {
+        ring.classList.add('contact-merge');
+        ring.classList.remove('clicking', 'hovering', 'nav-merge');
+        ring.style.transition =
+          'transform 0.55s cubic-bezier(.22,1,.36,1), ' +
+          'width 0.55s cubic-bezier(.22,1,.36,1), ' +
+          'height 0.55s cubic-bezier(.22,1,.36,1), ' +
+          'border-radius 0.55s cubic-bezier(.22,1,.36,1), ' +
+          'opacity 0.2s ease';
+        ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+        ring.style.width  = r.width  + 'px';
+        ring.style.height = r.height + 'px';
+        ring.style.opacity = '0';
+      });
+    }
+
+    function burstOutContact(targetEl) {
+      _setLocked(false);
+      ring.classList.remove('contact-merge');
+      const r = targetEl.getBoundingClientRect();
+      const cx = r.left + r.width  / 2;
+      const cy = r.top  + r.height / 2;
+      ring.style.transition = 'none';
+      ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+      ring.style.width = r.width + 'px';
+      ring.style.height = r.height + 'px';
+      ring.style.borderRadius = '999px';
+      ring.style.opacity = '0.6';
+      requestAnimationFrame(() => {
+        ring.style.transition =
+          'transform 0.4s cubic-bezier(.22,1,.36,1), ' +
+          'width 0.4s cubic-bezier(.22,1,.36,1), ' +
+          'height 0.4s cubic-bezier(.22,1,.36,1), ' +
+          'border-radius 0.4s cubic-bezier(.22,1,.36,1), ' +
+          'opacity 0.35s ease';
+        ring.style.width = '56px';
+        ring.style.height = '56px';
+        ring.style.borderRadius = '50%';
+        ring.style.opacity = '1';
+      });
+    }
+
+    const emailPill  = document.getElementById('contact-email-pill');
+    const contactBtn = document.getElementById('contact-open-btn');
+
+    if (emailPill) {
+      emailPill.addEventListener('mouseenter', () => mergeIntoContact(emailPill));
+      emailPill.addEventListener('mouseleave', () => burstOutContact(emailPill));
+    }
+    if (contactBtn) {
+      contactBtn.addEventListener('mouseenter', () => mergeIntoContact(contactBtn));
+      contactBtn.addEventListener('mouseleave', () => burstOutContact(contactBtn));
+    }
+  });
+})();
+
+// ── Dev Portal: Theme Switcher ────────────────────
+(function () {
+  const THEMES = {
+    dark: {
+      '--bg':       '#0a0a0a',
+      '--bg2':      '#111111',
+      '--bg3':      '#181818',
+      '--text':     '#ffffff',
+      '--text-dim': '#666666',
+      '--text-mid': '#999999',
+      '--accent':   '#7c3aed',
+      '--accent-l': '#9d5ff5',
+      '--accent-g': 'rgba(124, 58, 237, 0.18)',
+      '--border':   'rgba(255,255,255,0.07)',
+      '--border-h': 'rgba(255,255,255,0.14)',
+    },
+    light: {
+      '--bg':       '#f0eeff',
+      '--bg2':      '#e4d9ff',
+      '--bg3':      '#d8ccff',
+      '--text':     '#1a0a3a',
+      '--text-dim': '#7060a0',
+      '--text-mid': '#4a2e80',
+      '--accent':   '#7c3aed',
+      '--accent-l': '#6d28d9',
+      '--accent-g': 'rgba(124, 58, 237, 0.15)',
+      '--border':   'rgba(100,60,200,0.12)',
+      '--border-h': 'rgba(100,60,200,0.22)',
+    }
+  };
+
+  function applyTheme(name) {
+    const vars = THEMES[name];
+    if (!vars) return;
+    const root = document.documentElement;
+    Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v));
+    document.body.classList.toggle('theme-light', name === 'light');
+    document.body.classList.toggle('theme-dark',  name === 'dark');
+    // Update active state on buttons
+    document.querySelectorAll('.dev-portal-theme-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.theme === name);
+    });
+    localStorage.setItem('cash33-theme', name);
+  }
+
+  // Apply saved theme on load
+  const saved = localStorage.getItem('cash33-theme') || 'dark';
+  applyTheme(saved);
+
+  // Wire up buttons
+  document.querySelectorAll('.dev-portal-theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
+  });
+})();

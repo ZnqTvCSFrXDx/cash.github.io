@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
   <canvas id="bg-canvas"></canvas>
@@ -20,64 +21,87 @@
       <li><a href="#about">ABOUT</a></li>
       <li><a href="#projects">WORK</a></li>
       <li><a href="#socials">SOCIALS</a></li>
-      <li><a href="#files">VAULT</a></li>
+      <li><a href="#contact">CONTACT</a></li>
     </ul>
   </nav>
 
-  <aside class="socials-bar">
-    <div class="socials-pill">
-      <a href="#" title="GitHub">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-      </a>
-      <a href="#" title="LinkedIn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
-      </a>
-      <a href="#" title="X / Twitter">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l16 16M4 20L20 4"/></svg>
-      </a>
-      <a href="#" title="Instagram">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg>
-      </a>
+  <aside class="dev-portal" id="dev-portal">
+    <div class="dev-portal-pill" id="dev-portal-pill">
+      <img class="dev-portal-logo" src="assets/cashpfp.jpg" alt="Clark" />
+      <div class="dev-portal-links">
+        <div class="dev-portal-divider"></div>
+        <a href="#" class="dev-portal-btn" title="Downloads" id="dp-downloads">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v13M7 11l5 5 5-5"/><path d="M3 19h18"/></svg>
+          <span class="dev-portal-label">Downloads</span>
+        </a>
+        <a href="https://github.com/ZnqTvCSFrXDx" class="dev-portal-btn" title="GitHub" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+          <span class="dev-portal-label">GitHub</span>
+        </a>
+        <a href="https://discord.gg/wwVUFfnRpg" class="dev-portal-btn" title="Discord" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+          <span class="dev-portal-label">Discord</span>
+        </a>
+        <div class="dev-portal-divider"></div>
+        <button class="dev-portal-btn dev-portal-theme-btn" id="dp-theme-dark" title="Dark / Cosmic" data-theme="dark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span class="dev-portal-label">Dark</span>
+        </button>
+        <button class="dev-portal-btn dev-portal-theme-btn" id="dp-theme-light" title="Light / Aurora" data-theme="light">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <span class="dev-portal-label">Light</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <aside class="page-nav" id="page-nav">
+    <div class="page-nav-track">
+      <div class="page-nav-fill" id="page-nav-fill"></div>
     </div>
   </aside>
 
   <section id="hero">
-  <div class="hero-left">
-    <p class="hero-hello">Hello! I'm</p>
-    <h1 class="hero-name" aria-label="CLARK">
-  <span class="glitch-wrap">
-    <span class="glitch-main">CLARK</span>
-    <span class="glitch-r" aria-hidden="true">CLARK</span>
-    <span class="glitch-b" aria-hidden="true">CLARK</span>
-  </span>
-</h1>
-    <div class="hero-roles">
-      <p class="hero-an">A</p>
-      <span id="scramble-role">DEVELOPER</span>
+
+    <div class="hero-left">
+      <div class="hero-intro">
+        <p class="hero-hello">Hello I'm</p>
+        <h1 class="hero-name" aria-label="CLARK">
+          <span class="glitch-wrap">
+            <span class="glitch-main">CLARK</span>
+            <span class="glitch-r" aria-hidden="true">CLARK</span>
+            <span class="glitch-b" aria-hidden="true">CLARK</span>
+          </span>
+        </h1>
+      </div>
+      <div class="hero-roles">
+        <span id="scramble-role">DEVELOPER</span>
+        <span class="hero-hash">#</span>
+      </div>
+      <div class="ai-terminal" id="ai-terminal">
+        <div class="ai-terminal-bar">
+          <span class="t-dot t-red"></span>
+          <span class="t-dot t-yellow"></span>
+          <span class="t-dot t-green"></span>
+          <span class="t-title">Ca$h AI ~ Assistant</span>
+        </div>
+        <div class="ai-terminal-messages" id="ai-messages">
+          <div class="ai-msg ai-msg--bot">
+            <span class="t-dim">» </span><span class="t-green-t">[AI]</span> Hey — ask me anything about Clark or this site.
+          </div>
+        </div>
+        <div class="ai-terminal-input-row">
+          <span class="t-dim t-prompt">$ </span>
+          <input id="ai-input" class="ai-input" type="text" placeholder="type your question..." autocomplete="off" spellcheck="false" />
+          <button id="ai-send" class="ai-send-btn" aria-label="Send">&#9656;</button>
+        </div>
+      </div>
     </div>
-    <!-- ── AI Terminal Chat ── -->
-<div class="ai-terminal" id="ai-terminal">
-  <div class="ai-terminal-bar">
-    <span class="t-dot t-red"></span>
-    <span class="t-dot t-yellow"></span>
-    <span class="t-dot t-green"></span>
-    <span class="t-title">clark@cash33 ~ assistant</span>
-  </div>
-  <div class="ai-terminal-messages" id="ai-messages">
-    <div class="ai-msg ai-msg--bot">
-      <span class="t-dim">» </span><span class="t-green-t">[AI]</span> Hey — ask me anything about Clark or this site.
-    </div>
-  </div>
-  <div class="ai-terminal-input-row">
-    <span class="t-dim t-prompt">$ </span>
-    <input id="ai-input" class="ai-input" type="text" placeholder="type your question..." autocomplete="off" spellcheck="false" />
-    <button id="ai-send" class="ai-send-btn" aria-label="Send">&#9656;</button>
-  </div>
-</div>
-  </div>
+
+    <div class="hero-divider"></div>
 
     <div class="memoji" id="memoji">
-      <svg viewBox="-80 -60 560 580" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="-80 -80 560 480" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="skin" cx="40%" cy="35%" r="75%">
             <stop offset="0%" stop-color="#ffd9b8"/>
@@ -165,9 +189,7 @@
   <circle cx="326" cy="234" r="10" fill="#111" opacity="0.8"/>
   <circle cx="326" cy="234" r="6" fill="#1a1a2e"/>
 
-  <!-- Neck + shirt -->
-  <rect x="165" y="330" width="70" height="70" rx="28" fill="#e8a877"/>
-  <path d="M70 460 Q200 360 330 460 Z" fill="#7c3aed"/>
+  
 
   <!-- Face -->
   <ellipse cx="200" cy="225" rx="120" ry="135" fill="url(#skin)"/>
@@ -223,25 +245,26 @@
   </g>
   </g>
       </svg>
+
     </div>
+
     <div class="hero-glow"></div>
   </section>
 
   <section id="about" class="section">
-    <div class="section-header">
-      <span class="section-num">01</span>
-      <h2>ABOUT</h2>
+    <div class="section-header reveal">
+      <h2><span class="tag-bracket">&lt;</span>ABOUT<span class="tag-bracket">/&gt;</span></h2>
     </div>
     <div class="about-grid">
 
       <div class="about-left">
-        <div class="about-text">
+        <div class="about-text reveal">
           <p>Hey — I'm Clark. Welcome to my space!</p>
           <p>This is where I store and share my projects, tools, files, and ideas. No corporate branding—just the things I'm building and experimenting with.</p>
           <p>I create development tools and run the <span class="hi">CASHv33</span> community, with a focus on performance, efficiency, and making technology easier to understand and use.</p>
         </div>
         <div class="about-split-box">
-          <div class="split-panel" id="panel-fullstack">
+          <div class="split-panel reveal" id="panel-fullstack">
             <div class="split-panel-inner">
               <div class="split-icon">&lt;/&gt;</div>
               <h3 class="split-title">Full-Stack</h3>
@@ -257,7 +280,7 @@
             </div>
           </div>
           <div class="split-divider"></div>
-          <div class="split-panel" id="panel-windows">
+          <div class="split-panel reveal" id="panel-windows">
             <div class="split-panel-inner">
               <div class="split-icon">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
@@ -278,7 +301,7 @@
       </div>
 
       <div class="about-right">
-        <div class="sphere-wrap" id="sphere-wrap">
+        <div class="sphere-wrap reveal" id="sphere-wrap">
           <canvas id="sphere-canvas"></canvas>
         </div>
       </div>
@@ -287,12 +310,11 @@
   </section>
 
   <section id="projects" class="section">
-    <div class="section-header">
-      <span class="section-num">02</span>
-      <h2>WORK</h2>
+    <div class="section-header reveal">
+      <h2><span class="tag-bracket">&lt;</span>WORK<span class="tag-bracket">/&gt;</span></h2>
     </div>
 
-    <div class="belt-wrap">
+    <div class="belt-wrap reveal">
       <div class="belt-scene" id="belt-scene">
         <div class="belt-track" id="belt-track"></div>
         <div class="belt-track-line"></div>
@@ -366,14 +388,14 @@
   </section>
 
   <section id="socials" class="section">
-    <div class="section-header section-header--center">
-      <span class="section-num">03</span>
-      <h2>SOCIALS</h2>
+    <div class="section-header section-header--center reveal">
+      <h2><span class="tag-bracket">&lt;</span>SOCIALS<span class="tag-bracket">/&gt;</span></h2>
     </div>
     <div class="socials-stage" id="socials-stage">
+    <div class="sc-divider-left"></div>
     <div class="socials-grid">
 
-      <a href="#" class="social-card" data-platform="github">
+      <a href="#" class="social-card reveal" data-platform="github">
         <div class="sc-scan"></div>
         <div class="social-icon">
           <svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
@@ -387,78 +409,83 @@
           <span class="social-status"><span class="status-label">ACTIVE</span></span>
           <span class="social-arrow">↗</span>
         </div>
-        <div class="sc-preview" data-initials="CC" data-name="Clark Cash" data-handle="github.com/ZnqTvCSFrXDx" data-status="ACTIVE NOW" data-cta="VIEW PROFILE" data-bio="Builder. Tinkerer. Making things work." data-stat1-label="Repos" data-stat1-val="12" data-stat2-label="Followers" data-stat2-val="4" data-stat3-label="Stars" data-stat3-val="7"></div>
+        <div class="sc-preview" data-initials="CC" data-name="@ZnqTvCSFrXDx" data-handle="github.com/ZnqTvCSFrXDx" data-status="ACTIVE NOW" data-cta="VIEW PROFILE" data-bio="Still experimenting, still learning — just figuring things out one repo at a time." data-stat1-label="Repos" data-stat1-val="4" data-stat2-label="Followers" data-stat2-val="0" data-stat3-label="Stars" data-stat3-val="0"></div>
       </a>
 
-      <a href="#" class="social-card" data-platform="discord">
+      <a href="https://discord.gg/wwVUFfnRpg" class="social-card reveal" data-platform="discord" target="_blank" rel="noopener">
         <div class="sc-scan"></div>
         <div class="social-icon">
           <svg viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
         </div>
         <div class="social-body">
           <span class="social-name">Discord</span>
-          <span class="social-handle">CASH33 Server</span>
+          <span class="social-handle">CASHv33 Server</span>
         </div>
         <div class="sc-right">
           <div class="social-signal"><div class="signal-bar"></div><div class="signal-bar"></div><div class="signal-bar"></div><div class="signal-bar"></div></div>
           <span class="social-status"><span class="status-label">ONLINE</span></span>
           <span class="social-arrow">↗</span>
         </div>
-        <div class="sc-preview" data-initials="C3" data-name="CASH33 Server" data-handle="discord.gg/cash33" data-status="3 MEMBERS ONLINE NOW" data-cta="VISIT SERVER" data-bio="Chill dev server. Drop in, say hi." data-stat1-label="Members" data-stat1-val="18" data-stat2-label="Online" data-stat2-val="3" data-stat3-label="Channels" data-stat3-val="8"></div>
+        <div class="sc-preview" data-initials="C3" data-name="CASHv33 Server" data-handle="discord.gg/wwVUFfnRpg" data-status="ACTIVE NOW" data-cta="JOIN SERVER" data-bio="Chill dev server. Pull up, chat, build stuff." data-stat1-label="Members" data-stat1-val="18" data-stat2-label="Language" data-stat2-val="EN & FIL" data-stat3-label="Access" data-stat3-val="FREE"></div>
       </a>
 
-      <a href="#" class="social-card" data-platform="instagram">
+      <a href="https://www.instagram.com/jzzztnclark/" class="social-card reveal" data-platform="instagram" target="_blank" rel="noopener">
         <div class="sc-scan"></div>
         <div class="social-icon">
           <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/></svg>
         </div>
         <div class="social-body">
           <span class="social-name">Instagram</span>
-          <span class="social-handle">@yourhandle</span>
+          <span class="social-handle">@jzzztnclark</span>
         </div>
         <div class="sc-right">
           <div class="social-signal"><div class="signal-bar"></div><div class="signal-bar"></div><div class="signal-bar"></div><div class="signal-bar"></div></div>
           <span class="social-status">FOLLOW</span>
           <span class="social-arrow">↗</span>
         </div>
-        <div class="sc-preview" data-initials="CC" data-name="Clark Cash" data-handle="instagram.com/yourhandle" data-status="NEW POSTS WEEKLY" data-cta="FOLLOW" data-bio="Dev life. Random stuff. Philippines." data-stat1-label="Posts" data-stat1-val="24" data-stat2-label="Followers" data-stat2-val="310" data-stat3-label="Following" data-stat3-val="180"></div>
+        <div class="sc-preview" data-initials="JC" data-name="@jzzztnclark" data-handle="instagram.com/jzzztnclark" data-status="ACTIVE" data-cta="FOLLOW" data-bio="Follow &amp; connect with me · Life Updates" data-stat1-label="Posts" data-stat1-val="0" data-stat2-label="Followers" data-stat2-val="273" data-stat3-label="Following" data-stat3-val="246"></div>
       </a>
 
       <div class="socials-divider"><span>WORK</span></div>
 
-      <a href="#" class="social-card" data-platform="linkedin">
+      <a href="https://www.linkedin.com/in/justin-mendoza-7bb04b416/" class="social-card reveal" data-platform="linkedin" target="_blank" rel="noopener">
         <div class="sc-scan"></div>
         <div class="social-icon">
           <svg viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
         </div>
         <div class="social-body">
-          <span class="social-name">LinkedIn</span>
-          <span class="social-handle">Clark Cash</span>
+          <div class="social-name-row">
+            <span class="social-name">LinkedIn</span>
+            <span class="sc-hire-tag">HIRE ME</span>
+          </div>
+          <span class="social-handle">Justin Mendoza</span>
         </div>
         <div class="sc-right">
           <div class="social-signal"><div class="signal-bar"></div><div class="signal-bar"></div><div class="signal-bar"></div><div class="signal-bar"></div></div>
           <span class="social-status">CONNECT</span>
           <span class="social-arrow">↗</span>
         </div>
-        <div class="sc-preview" data-initials="CC" data-name="Clark Cash" data-handle="linkedin.com/in/clarkcash" data-status="OPEN TO WORK" data-cta="CONNECT" data-bio="Web Developer · Open to opportunities" data-stat1-label="Connections" data-stat1-val="87" data-stat2-label="Posts" data-stat2-val="5" data-stat3-label="Followers" data-stat3-val="92"></div>
+        <div class="sc-preview" data-initials="JM" data-name="Justin Mendoza" data-handle="linkedin.com/in/justin-mendoza" data-status="OPEN TO WORK" data-cta="CONNECT" data-bio="Full-stack dev · Available for remote work" data-stat1-label="Connections" data-stat1-val="0" data-stat2-label="Posts" data-stat2-val="0" data-stat3-label="Followers" data-stat3-val="0"></div>
       </a>
 
-      <a href="https://www.onlinejobs.ph/" class="social-card" data-platform="onlinejobs" target="_blank" rel="noopener">
+      <a href="https://v2.onlinejobs.ph/jobseekers/info/4672292" class="social-card reveal" data-platform="onlinejobs" target="_blank" rel="noopener">
         <div class="sc-scan"></div>
         <div class="social-icon">
           <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
         </div>
         <div class="social-body">
-          <span class="social-name">OnlineJobs.ph</span>
-          <span class="social-handle">onlinejobs.ph/jobseekers/profile/...</span>
+          <div class="social-name-row">
+            <span class="social-name">OnlineJobs.ph</span>
+            <span class="sc-hire-tag">HIRE ME</span>
+          </div>
+          <span class="social-handle">Justin Clark Mendoza</span>
         </div>
         <div class="sc-right">
-          <span class="sc-hire-tag">HIRE ME</span>
           <div class="social-signal"><div class="signal-bar"></div><div class="signal-bar"></div><div class="signal-bar"></div><div class="signal-bar"></div></div>
           <span class="social-status">OPEN TO WORK</span>
           <span class="social-arrow">↗</span>
         </div>
-        <div class="sc-preview" data-initials="CC" data-name="Clark Cash" data-handle="onlinejobs.ph/jobseekers/profile" data-status="AVAILABLE FOR HIRE" data-cta="VIEW PROFILE" data-bio="Full-stack dev · Available for remote work" data-stat1-label="Skills" data-stat1-val="9" data-stat2-label="Rate" data-stat2-val="$8/hr" data-stat3-label="Jobs Done" data-stat3-val="3"></div>
+        <div class="sc-preview" data-initials="JM" data-name="Justin Clark Mendoza" data-handle="v2.onlinejobs.ph/jobseekers/info/4672292" data-status="OPEN TO WORK" data-cta="CONNECT" data-bio="Full-stack dev · Available for remote work" data-stat1-label="Language" data-stat1-val="EN &amp; FIL" data-stat2-label="Rate" data-stat2-val="$2/hr" data-stat3-label="Availability" data-stat3-val="PART-TIME"></div>
       </a>
 
     </div>
@@ -467,26 +494,89 @@
     </div>
   </section>
 
-  <section id="files" class="section">
-    <div class="section-header">
-      <span class="section-num">04</span>
-      <h2>VAULT</h2>
+  <section id="contact" class="section">
+    <div class="section-header reveal">
+      <h2><span class="tag-bracket">&lt;</span>CONTACT<span class="tag-bracket">/&gt;</span></h2>
     </div>
-    <p class="section-sub">Apps, images, downloads — things I want to keep accessible.</p>
-    <div class="files-list">
-      <div class="file-item">
-        <span class="file-num">—</span>
-        <span class="file-name">Drop files here soon</span>
-        <span class="file-meta">—</span>
+
+    <div class="contact-stage reveal">
+      <h3 class="contact-name">Justin Clark<br>Mendoza</h3>
+
+      <div class="contact-pills">
+        <div class="contact-pill contact-pill--email" id="contact-email-pill">
+          <svg class="contact-pill-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+          <span class="contact-email-text">justinclark.mendoza.official@gmail.com</span>
+          <span class="contact-email-copy-label">Copy Email</span>
+        </div>
+        <span class="contact-pill contact-pill--location">
+          <svg class="contact-pill-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          Philippines
+        </span>
+        <span class="contact-pill contact-pill--status">
+          <span class="contact-dot"></span>
+          <span class="contact-status-text">AVAILABLE</span>
+        </span>
       </div>
+
+      <button class="contact-btn" id="contact-open-btn">
+        <span class="contact-btn-text">Contact Me</span>
+        <span class="contact-btn-icon">↗</span>
+      </button>
     </div>
   </section>
 
+  <!-- Contact Modal -->
+  <div class="contact-modal-overlay" id="contact-modal" aria-hidden="true">
+    <div class="contact-modal">
+      <div class="contact-modal-header">
+        <div class="contact-modal-dots">
+          <span class="t-dot t-red"></span>
+          <span class="t-dot t-yellow"></span>
+          <span class="t-dot t-green"></span>
+        </div>
+        <span class="contact-modal-title">send_clark_message.exe</span>
+        <button class="contact-modal-close" id="contact-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="contact-modal-body">
+        <div class="contact-field">
+          <label class="contact-field-label">YOUR NAME</label>
+          <input type="text" id="cf-name" class="contact-input" placeholder="John Doe" autocomplete="off" />
+        </div>
+        <div class="contact-field">
+          <label class="contact-field-label">YOUR EMAIL</label>
+          <input type="email" id="cf-email" class="contact-input" placeholder="john@example.com" autocomplete="off" />
+        </div>
+        <div class="contact-field">
+          <label class="contact-field-label">SUBJECT</label>
+          <input type="text" id="cf-subject" class="contact-input" placeholder="What's this about?" autocomplete="off" />
+        </div>
+        <div class="contact-field">
+          <label class="contact-field-label">MESSAGE</label>
+          <textarea id="cf-message" class="contact-input contact-textarea" placeholder="Say something..."></textarea>
+        </div>
+
+        <button class="contact-submit-btn" id="contact-submit-btn">
+          <span id="contact-submit-text">SEND</span>
+          <span class="contact-btn-icon">⟶</span>
+        </button>
+
+        <div class="contact-status-msg" id="contact-status-msg"></div>
+      </div>
+    </div>
+  </div>
+
   <footer>
-    <span class="footer-logo">CLARK · CASH33</span>
-    <span class="footer-copy">© 2025</span>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="footer-mark">C</span>
+        <span class="footer-logo">Designed &amp; Developed by <span class="footer-name">Justin Clark</span></span>
+      </div>
+      <a href="#hero" class="footer-top">Back to top <span class="footer-top-arrow">↑</span></a>
+      <span class="footer-copy">© 2026</span>
+    </div>
   </footer>
 
-  <script src="script.js?v=2"></script>
+  <script src="script.js?v=3"></script>
 </body>
 </html>
