@@ -1213,16 +1213,204 @@ if (_aboutEl) {
   }, { passive: true });
 })();
 
-// ── AI Terminal Chat ──────────────────────────────
+// ── AI Chat Widget ────────────────────────────────
 (() => {
   const input    = document.getElementById('ai-input');
   const sendBtn  = document.getElementById('ai-send');
   const messages = document.getElementById('ai-messages');
-  const terminal = document.getElementById('ai-terminal');
+  const panel    = document.getElementById('ai-widget-panel');
+  const toggleBtn = document.getElementById('ai-widget-btn');
+  const closeBtn  = document.getElementById('ai-chat-close');
   if (!input || !messages) return;
 
-  input.addEventListener('focus', () => terminal.classList.add('absorbing'));
-  input.addEventListener('blur',  () => terminal.classList.remove('absorbing'));
+  // ── Inject widget enhancement styles ──
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Message entrance animation */
+    .ai-msg-row {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.28s cubic-bezier(.22,1,.36,1), transform 0.28s cubic-bezier(.22,1,.36,1);
+    }
+    .ai-msg-row.ai-msg-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Scroll fade overlay at bottom of messages */
+    .ai-chat-messages {
+      position: relative;
+    }
+    .ai-scroll-fade {
+      position: sticky;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 36px;
+      background: linear-gradient(to bottom, transparent, rgba(9,5,18,0.92));
+      pointer-events: none;
+      margin-top: -36px;
+      border-radius: 0 0 4px 4px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      flex-shrink: 0;
+    }
+    .ai-scroll-fade.visible { opacity: 1; }
+
+    /* Suggested prompt chips */
+    .ai-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 0 14px 12px;
+      transition: opacity 0.25s ease, max-height 0.35s cubic-bezier(.22,1,.36,1);
+      max-height: 80px;
+      overflow: hidden;
+    }
+    .ai-chips.hidden {
+      opacity: 0;
+      max-height: 0;
+      padding-bottom: 0;
+      pointer-events: none;
+    }
+    .ai-chip {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11.5px;
+      padding: 5px 11px;
+      border-radius: 20px;
+      border: 1px solid rgba(157,95,245,0.35);
+      background: rgba(124,58,237,0.08);
+      color: rgba(200,180,255,0.85);
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .ai-chip:hover {
+      background: rgba(124,58,237,0.2);
+      border-color: rgba(157,95,245,0.7);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* Send button: morph icon to check */
+    .ai-send-btn svg { transition: opacity 0.15s ease, transform 0.2s cubic-bezier(.22,1,.36,1); }
+    .ai-send-btn.sent svg { opacity: 0; transform: scale(0.5) rotate(20deg); }
+    .ai-send-check {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.18s ease;
+      pointer-events: none;
+    }
+    .ai-send-btn.sent .ai-send-check { opacity: 1; }
+    .ai-send-check svg { width: 14px; height: 14px; color: #fff; }
+
+    /* Input shimmer sweep on focus */
+    .ai-input {
+      position: relative;
+    }
+    @keyframes inputShimmer {
+      0%   { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    .ai-input:focus {
+      background-image: linear-gradient(
+        90deg,
+        rgba(124,58,237,0.06) 0%,
+        rgba(157,95,245,0.14) 50%,
+        rgba(124,58,237,0.06) 100%
+      );
+      background-size: 200% 100%;
+      animation: inputShimmer 1.8s ease infinite;
+    }
+
+    /* Panel: spring open with blur */
+    .ai-widget-panel {
+      filter: blur(4px);
+    }
+    .ai-widget-panel.open {
+      filter: blur(0px);
+      transition: opacity 0.28s ease, transform 0.38s cubic-bezier(.22,1,.36,1), filter 0.28s ease !important;
+    }
+
+    /* Typewriter cursor blink */
+    .ai-typewriter-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 13px;
+      background: rgba(157,95,245,0.9);
+      border-radius: 1px;
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: cursorBlink 0.8s ease-in-out infinite;
+    }
+    @keyframes cursorBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // ── Add checkmark SVG to send button ──
+  const checkWrap = document.createElement('span');
+  checkWrap.className = 'ai-send-check';
+  checkWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  sendBtn.appendChild(checkWrap);
+
+  // ── Scroll fade overlay ──
+  const scrollFade = document.createElement('div');
+  scrollFade.className = 'ai-scroll-fade';
+  messages.appendChild(scrollFade);
+
+  function updateScrollFade() {
+    const overflowing = messages.scrollHeight - messages.scrollTop > messages.clientHeight + 8;
+    scrollFade.classList.toggle('visible', overflowing);
+  }
+  messages.addEventListener('scroll', updateScrollFade, { passive: true });
+
+  // ── Suggested prompt chips ──
+  const CHIPS = ['What can Clark build?', 'How do I reach him?', 'What\'s the CASH33 Optimizer?'];
+  const chipsEl = document.createElement('div');
+  chipsEl.className = 'ai-chips';
+  CHIPS.forEach(label => {
+    const chip = document.createElement('button');
+    chip.className = 'ai-chip';
+    chip.textContent = label;
+    chip.addEventListener('click', () => {
+      input.value = label;
+      hideChips();
+      send();
+    });
+    chipsEl.appendChild(chip);
+  });
+  // Insert chips above the input row
+  const inputRow = document.querySelector('.ai-chat-input-row');
+  if (inputRow) inputRow.parentNode.insertBefore(chipsEl, inputRow);
+
+  let chipsHidden = false;
+  function hideChips() {
+    if (chipsHidden) return;
+    chipsHidden = true;
+    chipsEl.classList.add('hidden');
+  }
+
+  // ── Toggle open/close ──
+  function openPanel() {
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+    input.focus();
+    setTimeout(updateScrollFade, 50);
+  }
+  function closePanel() {
+    panel.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+  }
+  toggleBtn.addEventListener('click', () => panel.classList.contains('open') ? closePanel() : openPanel());
+  closeBtn.addEventListener('click', closePanel);
 
   const SYSTEM = `You are Clark's personal AI assistant embedded in his portfolio website.
 
@@ -1242,26 +1430,84 @@ Keep answers short, direct, and helpful. Don't make up details you don't know �
 
   const history = [];
 
+  function timeNow() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ── Animate message entrance ──
+  function revealMsg(row) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => row.classList.add('ai-msg-visible'));
+    });
+  }
+
   function addMsg(text, type) {
-    const div = document.createElement('div');
-    div.className = `ai-msg ai-msg--${type}`;
-    if (type === 'bot') {
-      div.innerHTML = `<span class="t-dim">» </span><span class="t-green-t">[AI]</span> ${text}`;
+    const row = document.createElement('div');
+    row.className = `ai-msg-row ai-msg-row--${type}`;
+
+    if (type === 'thinking') {
+      row.innerHTML = `<div class="ai-bubble ai-bubble--bot ai-bubble--thinking"><span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span></div>`;
+      messages.insertBefore(row, scrollFade);
+      revealMsg(row);
     } else {
-      div.textContent = text;
+      row.innerHTML = `
+        <div class="ai-bubble ai-bubble--${type}"></div>
+        <span class="ai-msg-time">${timeNow()}</span>
+      `;
+      messages.insertBefore(row, scrollFade);
+      revealMsg(row);
+
+      const bubble = row.querySelector('.ai-bubble');
+      if (type === 'bot') {
+        typewriterEffect(bubble, text);
+      } else {
+        bubble.textContent = text;
+      }
     }
-    messages.appendChild(div);
+
     messages.scrollTop = messages.scrollHeight;
-    return div;
+    updateScrollFade();
+    return row;
+  }
+
+  // ── Typewriter effect ──
+  function typewriterEffect(el, text) {
+    let i = 0;
+    const cursor = document.createElement('span');
+    cursor.className = 'ai-typewriter-cursor';
+    el.appendChild(cursor);
+
+    const speed = Math.max(12, Math.min(28, 2200 / text.length)); // adaptive speed
+
+    function tick() {
+      if (i < text.length) {
+        cursor.insertAdjacentText('beforebegin', text[i]);
+        i++;
+        messages.scrollTop = messages.scrollHeight;
+        setTimeout(tick, speed);
+      } else {
+        cursor.remove();
+        updateScrollFade();
+      }
+    }
+    tick();
+  }
+
+  // ── Send button morph ──
+  function morphSendBtn() {
+    sendBtn.classList.add('sent');
+    setTimeout(() => sendBtn.classList.remove('sent'), 900);
   }
 
   async function send() {
     const val = input.value.trim();
     if (!val) return;
     input.value = '';
+    hideChips();
+    morphSendBtn();
     addMsg(val, 'user');
     history.push({ role: 'user', content: val });
-    const thinking = addMsg('thinking...', 'thinking');
+    const thinking = addMsg('', 'thinking');
     try {
       const res = await fetch('http://localhost:3001', {
         method: 'POST',
@@ -1275,12 +1521,21 @@ Keep answers short, direct, and helpful. Don't make up details you don't know �
       addMsg(reply, 'bot');
     } catch (e) {
       thinking.remove();
-      addMsg('Connection error. Try again.', 'thinking');
+      addMsg('Connection error. Is the server running?', 'bot');
     }
   }
 
   sendBtn.addEventListener('click', send);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+  // Animate the initial bot greeting message
+  requestAnimationFrame(() => {
+    const firstRow = messages.querySelector('.ai-msg-row');
+    if (firstRow) {
+      firstRow.classList.add('ai-msg-visible');
+      updateScrollFade();
+    }
+  });
 })();
 
 document.querySelectorAll('.nav-links a, .nav-logo').forEach(el => {

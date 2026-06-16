@@ -102,13 +102,10 @@
 
     <div class="hero-center">
 
-      <div class="hero-status-badge">
-        <span class="hero-status-dot"></span>
-        <span class="hero-status-text">AVAILABLE</span>
-      </div>
+      <p class="hero-hello">Hello! I'm</p>
 
     <div class="memoji" id="memoji">
-      <svg viewBox="-80 -80 560 480" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="-70 82 540 268" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">
         <defs>
           <radialGradient id="skin" cx="40%" cy="35%" r="75%">
             <stop offset="0%" stop-color="#ffd9b8"/>
@@ -255,16 +252,13 @@
 
     </div>
 
-      <div class="hero-intro">
-        <p class="hero-hello">Hello! I'm</p>
-        <h1 class="hero-name" aria-label="CLARK">
-          <span class="glitch-wrap">
-            <span class="glitch-main">CLARK</span>
-            <span class="glitch-r" aria-hidden="true">CLARK</span>
-            <span class="glitch-b" aria-hidden="true">CLARK</span>
-          </span>
-        </h1>
-      </div>
+      <h1 class="hero-name" aria-label="CLARK">
+        <span class="glitch-wrap">
+          <span class="glitch-main">CLARK</span>
+          <span class="glitch-r" aria-hidden="true">CLARK</span>
+          <span class="glitch-b" aria-hidden="true">CLARK</span>
+        </span>
+      </h1>
 
       <div class="hero-roles">
         <span class="hero-hash">#</span>
@@ -273,15 +267,11 @@
 
     </div>
 
-    <div class="scroll-indicators">
-      <div class="si">
-        <span class="si-label">SCROLL</span>
-        <div class="si-bracket-wrap">
-          <span class="si-bracket-text">[</span>
-          <span class="si-arrow">↓</span>
-          <span class="si-bracket-text">]</span>
-        </div>
+    <div class="scroll-indicator">
+      <div class="scroll-mouse">
+        <div class="scroll-wheel"></div>
       </div>
+      <div class="scroll-mouse-line"></div>
     </div>
 
     <div class="hero-glow"></div>
@@ -614,36 +604,47 @@
   </footer>
 
   <!-- ── Floating AI Widget ─────────────────────────── -->
+  <!-- AI Chat Widget -->
   <div class="ai-widget" id="ai-widget">
     <button class="ai-widget-btn" id="ai-widget-btn" aria-label="Ask AI about Clark">
-      <svg class="ai-widget-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/>
-        <path d="M12 6v6l4 2"/>
-        <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" opacity="0.3"/>
-        <path d="M9.5 9.5 Q12 7 14.5 9.5 Q17 12 14.5 14.5 Q12 17 9.5 14.5 Q7 12 9.5 9.5Z" fill="none" stroke="currentColor" stroke-width="1"/>
-      </svg>
-      <svg class="ai-widget-icon ai-widget-icon--close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="18" y1="6" x2="6" y2="18"/>
-        <line x1="6" y1="6" x2="18" y2="18"/>
-      </svg>
+      <img src="assets/ai_logo.png" alt="AI Assistant" class="ai-logo-img" />
       <span class="ai-widget-pulse"></span>
     </button>
     <div class="ai-widget-panel" id="ai-widget-panel" aria-hidden="true">
-      <div class="ai-terminal" id="ai-terminal">
-        <div class="ai-terminal-bar">
-          <span class="t-dot t-red"></span>
-          <span class="t-dot t-yellow"></span>
-          <span class="t-dot t-green"></span>
-          <span style="margin-left:8px;font-size:11px;letter-spacing:0.1em;color:#555;">clark_ai.exe</span>
+      <!-- Chat Header -->
+      <div class="ai-chat-header">
+        <div class="ai-chat-header-left">
+          <div class="ai-chat-avatar">
+            <img src="assets/ai_logo.png" alt="AI" />
+            <span class="ai-status-dot"></span>
+          </div>
+          <div class="ai-chat-info">
+            <span class="ai-chat-name">Clark AI</span>
+            <span class="ai-chat-status">Online</span>
+          </div>
         </div>
-        <div class="ai-terminal-messages" id="ai-messages">
-          <div class="ai-msg ai-msg--bot"><span class="t-dim">» </span><span class="t-green-t">[AI]</span> Hey! Ask me anything about Clark — his projects, skills, or how to reach him.</div>
+        <button class="ai-chat-close" id="ai-chat-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <!-- Messages -->
+      <div class="ai-chat-messages" id="ai-messages">
+        <div class="ai-msg-row ai-msg-row--bot">
+          <div class="ai-bubble ai-bubble--bot">Hey! Ask me anything about Clark — his projects, skills, or how to reach him. 👋</div>
+          <span class="ai-msg-time">Just now</span>
         </div>
-        <div class="ai-terminal-input-row">
-          <span class="t-prompt">›</span>
-          <input class="ai-input" id="ai-input" type="text" placeholder="Ask about Clark..." autocomplete="off" />
-          <button class="ai-send-btn" id="ai-send" aria-label="Send">⟶</button>
-        </div>
+      </div>
+      <!-- Input -->
+      <div class="ai-chat-input-row">
+        <input class="ai-input" id="ai-input" type="text" placeholder="Message Clark AI..." autocomplete="off" />
+        <button class="ai-send-btn" id="ai-send" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
       </div>
     </div>
   </div>
