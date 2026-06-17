@@ -108,9 +108,10 @@
       <svg viewBox="-70 82 540 268" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">
         <defs>
           <radialGradient id="skin" cx="40%" cy="35%" r="75%">
-            <stop offset="0%" stop-color="#ffd9b8"/>
-            <stop offset="100%" stop-color="#e8a877"/>
-          </radialGradient>
+            <stop offset="0%" stop-color="#d8a07b"/>
+            <stop offset="55%" stop-color="#c98a62"/>
+            <stop offset="100%" stop-color="#b16b45"/>
+        </radialGradient>
           <radialGradient id="halo" cx="50%" cy="50%" r="50%">
             <stop offset="0%"   stop-color="rgba(80,20,180,0)"/>
             <stop offset="52%"  stop-color="rgba(100,30,200,0.08)"/>
@@ -199,23 +200,23 @@
   <ellipse cx="200" cy="225" rx="120" ry="135" fill="url(#skin)"/>
 
   <!-- Hair -->
-  <path d="M84 205 Q70 130 110 100 Q150 78 200 80 Q250 78 290 100 Q330 130 316 205 Q300 145 200 143 Q100 145 84 205 Z" fill="#6b4423"/>
-  <path d="M88 200 Q90 80 200 78 Q310 80 312 200 Q298 138 200 136 Q102 138 88 200 Z" fill="#7d5230"/>
-  <path d="M155 85 Q200 78 245 85 Q220 82 200 81 Q180 82 155 85 Z" fill="#9a6a40" opacity="0.7"/>
-  <path d="M84 205 Q80 155 92 118 Q98 140 100 188 Z" fill="#5a3820" opacity="0.2"/>
-  <path d="M316 205 Q320 155 308 118 Q302 140 300 188 Z" fill="#5a3820" opacity="0.2"/>
-  <path d="M100 145 Q120 110 150 95" stroke="#4a2c10" stroke-width="2" fill="none" opacity="0.5"/>
-  <path d="M95 160 Q118 125 148 108" stroke="#4a2c10" stroke-width="1.5" fill="none" opacity="0.4"/>
-  <path d="M300 145 Q280 110 250 95" stroke="#4a2c10" stroke-width="2" fill="none" opacity="0.5"/>
-  <path d="M305 160 Q282 125 252 108" stroke="#4a2c10" stroke-width="1.5" fill="none" opacity="0.4"/>
-  <path d="M140 88 Q170 82 200 80 Q230 82 260 88" stroke="#9a6a40" stroke-width="1.5" fill="none" opacity="0.4"/>
-  <path d="M145 93 Q172 87 200 85 Q228 87 255 93" stroke="#9a6a40" stroke-width="1" fill="none" opacity="0.3"/>
-  <path d="M88 200 Q86 160 96 128 Q110 105 140 90 Q170 80 200 79 Q230 80 260 90 Q290 105 304 128 Q314 160 312 200 Q300 148 200 146 Q100 148 88 200 Z" fill="#5a3820" opacity="0.3"/>
+  <path d="M84 205 Q70 130 110 100 Q150 78 200 80 Q250 78 290 100 Q330 130 316 205 Q300 168 200 166 Q100 168 84 205 Z" fill="#1a0f08"/>
+  <path d="M88 200 Q90 80 200 78 Q310 80 312 200 Q298 167 200 165 Q102 167 88 200 Z" fill="#251208"/>
+  <path d="M155 85 Q200 78 245 85 Q220 82 200 81 Q180 82 155 85 Z" fill="#2e1a0a" opacity="0.7"/>
+  <path d="M84 205 Q80 155 92 118 Q98 140 100 188 Z" fill="#0a0603" opacity="0.2"/>
+  <path d="M316 205 Q320 155 308 118 Q302 140 300 188 Z" fill="#0a0603" opacity="0.2"/>
+  <path d="M100 145 Q120 110 150 95" stroke="#100806" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M95 160 Q118 125 148 108" stroke="#100806" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <path d="M300 145 Q280 110 250 95" stroke="#100806" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M305 160 Q282 125 252 108" stroke="#100806" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <path d="M140 88 Q170 82 200 80 Q230 82 260 88" stroke="#2e1a0a" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <path d="M145 93 Q172 87 200 85 Q228 87 255 93" stroke="#2e1a0a" stroke-width="1" fill="none" opacity="0.3"/>
+  <path d="M88 200 Q86 160 96 128 Q110 105 140 90 Q170 80 200 79 Q230 80 260 90 Q290 105 304 128 Q314 160 312 200 Q300 168 200 166 Q100 168 88 200 Z" fill="#0a0603" opacity="0.3"/>
 
   <!-- Eyebrows -->
   <g class="m-brows" id="m-brows">
-    <rect x="122" y="176" width="64" height="13" rx="6" fill="#4a2e10"/>
-    <rect x="214" y="176" width="64" height="13" rx="6" fill="#4a2e10"/>
+    <rect x="122" y="176" width="64" height="13" rx="3" fill="#1a0f08"/>
+    <rect x="214" y="176" width="64" height="13" rx="3" fill="#1a0f08"/>
   </g>
 
   <!-- Eyes -->
@@ -233,19 +234,17 @@
   </g>
 
   <!-- Nose -->
-  <path d="M194 265 Q200 272 206 265" stroke="#b06030" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M194 265 Q200 272 206 265" stroke="#602008" stroke-width="4" fill="none" stroke-linecap="round"/>
 
-  <!-- Default smile -->
+  <!-- Default mouth — flat straight line -->
   <g id="m-smile-closed">
-    <path d="M178 302 Q200 318 222 302 Q210 307 200 308 Q190 307 178 302 Z" fill="#c47a50"/>
-    <path d="M178 302 Q200 318 222 302" stroke="#a85e3a" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path id="m-mouth-line" d="M180 305 Q200 305 220 305" stroke="#602008" stroke-width="5" fill="none" stroke-linecap="round"/>
   </g>
 
-  <!-- Big smile -->
+  <!-- Smile on cursor move -->
   <g id="m-smile-open" opacity="0">
-    <path d="M163 296 Q200 340 237 296 Q220 322 200 326 Q180 322 163 296 Z" fill="#3a0f08"/>
-    <path d="M163 296 Q200 318 237 296 Q220 310 200 313 Q180 310 163 296 Z" fill="#fffdf8"/>
-    <path d="M163 296 Q200 340 237 296" stroke="#a85e3a" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+    <path d="M178 302 Q200 320 222 302 Q210 308 200 309 Q190 308 178 302 Z" fill="#6a2010"/>
+    <path d="M178 302 Q200 320 222 302" stroke="#602008" stroke-width="5" fill="none" stroke-linecap="round"/>
   </g>
   </g>
       </svg>
@@ -606,9 +605,13 @@
   <!-- ── Floating AI Widget ─────────────────────────── -->
   <!-- AI Chat Widget -->
   <div class="ai-widget" id="ai-widget">
+    <div class="ai-float-label">
+      <div class="ai-float-name"><span class="ai-float-dot"></span>CASH AI</div>
+      <div class="ai-float-msg">Ask me anything</div>
+    </div>
     <button class="ai-widget-btn" id="ai-widget-btn" aria-label="Ask AI about Clark">
-      <img src="assets/ai_logo.png" alt="AI Assistant" class="ai-logo-img" />
-      <span class="ai-widget-pulse"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="ai-unread-badge">1</span>
     </button>
     <div class="ai-widget-panel" id="ai-widget-panel" aria-hidden="true">
       <!-- Chat Header -->
@@ -619,13 +622,13 @@
             <span class="ai-status-dot"></span>
           </div>
           <div class="ai-chat-info">
-            <span class="ai-chat-name">Clark AI</span>
+            <span class="ai-chat-name">CASH AI</span>
             <span class="ai-chat-status">Online</span>
           </div>
         </div>
-        <button class="ai-chat-close" id="ai-chat-close" aria-label="Close">
+        <button class="ai-chat-close" id="ai-chat-close" aria-label="Minimize">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
         </button>
       </div>
@@ -638,7 +641,7 @@
       </div>
       <!-- Input -->
       <div class="ai-chat-input-row">
-        <input class="ai-input" id="ai-input" type="text" placeholder="Message Clark AI..." autocomplete="off" />
+        <input class="ai-input" id="ai-input" type="text" placeholder="Message CASH AI..." autocomplete="off" />
         <button class="ai-send-btn" id="ai-send" aria-label="Send">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"/>

@@ -645,6 +645,77 @@ fadeGroups.forEach(group => {
   if (navEl) { const r=[null]; navEl.addEventListener('mouseenter', () => mergeInto(navEl, r)); navEl.addEventListener('mouseleave', () => burstOut(navEl)); }
   if (sidebarEl) { const r=[null]; sidebarEl.addEventListener('mouseenter', () => mergeInto(sidebarEl, r)); sidebarEl.addEventListener('mouseleave', () => burstOut(sidebarEl)); }
 
+  // ── AI widget button + panel: same merge/burst as social cards ──
+  requestAnimationFrame(() => {
+    const aiBtn   = document.getElementById('ai-widget-btn');
+    const aiPanel = document.getElementById('ai-widget-panel');
+
+    function mergeAI(el) {
+      const r  = el.getBoundingClientRect();
+      const cx = r.left + r.width  / 2;
+      const cy = r.top  + r.height / 2;
+      locked = true;
+      ring.style.transition = 'none';
+      ring.style.transform = `translate(calc(${rx}px - 50%), calc(${ry}px - 50%))`;
+      ring.style.background = 'transparent';
+      ring.style.boxShadow  = 'none';
+      ring.style.filter     = 'none';
+      requestAnimationFrame(() => {
+        ring.classList.remove('nav-merge', 'clicking', 'hovering');
+        ring.classList.add('card-merge');
+        ring.style.transition =
+          'transform 0.65s cubic-bezier(.22,1,.36,1), ' +
+          'width 0.65s cubic-bezier(.22,1,.36,1), ' +
+          'height 0.65s cubic-bezier(.22,1,.36,1), ' +
+          'border-radius 0.65s cubic-bezier(.22,1,.36,1), ' +
+          'opacity 0.2s ease';
+        ring.style.transform  = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+        ring.style.width      = r.width  + 'px';
+        ring.style.height     = r.height + 'px';
+        ring.style.borderRadius = el === aiBtn ? '14px' : '20px';
+        ring.style.opacity    = '0';
+      });
+    }
+
+    function burstAI(el) {
+      locked = false;
+      ring.classList.remove('card-merge');
+      const r  = el.getBoundingClientRect();
+      const cx = r.left + r.width  / 2;
+      const cy = r.top  + r.height / 2;
+      ring.style.transition = 'none';
+      ring.style.background = '';
+      ring.style.boxShadow  = '';
+      ring.style.filter     = '';
+      ring.style.transform  = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+      ring.style.width      = r.width  + 'px';
+      ring.style.height     = r.height + 'px';
+      ring.style.borderRadius = '999px';
+      ring.style.opacity    = '0';
+      requestAnimationFrame(() => {
+        ring.style.transition =
+          'transform 0.55s cubic-bezier(.22,1,.36,1), ' +
+          'width 0.55s cubic-bezier(.22,1,.36,1), ' +
+          'height 0.55s cubic-bezier(.22,1,.36,1), ' +
+          'border-radius 0.55s cubic-bezier(.22,1,.36,1), ' +
+          'opacity 0.4s ease, filter 0.4s ease, background 0.35s ease';
+        ring.style.width        = '56px';
+        ring.style.height       = '56px';
+        ring.style.borderRadius = '50%';
+        ring.style.opacity      = '1';
+      });
+    }
+
+    if (aiBtn) {
+      aiBtn.addEventListener('mouseenter', () => mergeAI(aiBtn));
+      aiBtn.addEventListener('mouseleave', () => burstAI(aiBtn));
+    }
+    if (aiPanel) {
+      aiPanel.addEventListener('mouseenter', () => mergeAI(aiPanel));
+      aiPanel.addEventListener('mouseleave', () => burstAI(aiPanel));
+    }
+  });
+
   // ── Social cards + big preview: merge with no glow ──
   function mergeIntoCard(targetEl) {
     const r  = targetEl.getBoundingClientRect();
@@ -1056,77 +1127,49 @@ fadeGroups.forEach(group => {
     }
   }
 
+  // ── smooth cubic ease (in-out quad) ──────────────
+  function easeInOutQuad(t) {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
   window._heroTick = function() {
     const sy    = window.scrollY;
     const heroH = hero.offsetHeight;
-    const p     = Math.min(sy / (heroH * 0.7), 1);
+    // progress 0→1 over the first 65% of the hero height
+    const raw  = Math.min(sy / (heroH * 0.65), 1);
+    const ease = easeInOutQuad(raw);
 
-    scaleHit     = 1 + (scaleHit - 1) * 0.75;
-    chromaLife  *= 0.78;
-    helloX *= 0.70; helloY *= 0.70;
-    rolesX *= 0.70; rolesY *= 0.70;
-    memojiShakeX *= 0.72; memojiShakeY *= 0.72;
-
-    // Simple ease: slow start, gentle fade
-    const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-
-    const heroLeft = document.querySelector('.hero-left');
-    if (heroLeft) {
-      heroLeft.style.transform  = `translateY(${ease * -80}px)`;
-      heroLeft.style.opacity    = Math.max(0, 1 - ease * 1.4).toFixed(3);
-      heroLeft.style.filter     = '';
+    // ── hello: exits fastest, drifts upward ─────────
+    if (heroHello) {
+      heroHello.style.transform = `translateY(${ease * -36}px)`;
+      heroHello.style.opacity   = Math.max(0, 1 - ease * 2.2).toFixed(3);
     }
 
-    if (glitchTicks > 0) {
-      glitchTicks--;
-      const sliceOff = slices[0] ? slices[0].off : 0;
-      glitchMain.style.transform = `translateX(${sliceOff * 0.4}px)`;
-      glitchMain.style.clipPath  = slices[1] ? `inset(${slices[0].y}px 0 0 0)` : 'none';
-      if (chromaLife > 0.05) {
-        const cx = chromaX * chromaLife, cy = chromaY * chromaLife;
-        glitchR.style.opacity = (chromaLife * 0.9).toString();
-        glitchR.style.transform = `translate(${cx * 1.8}px, ${cy * -1.2}px)`;
-        glitchR.style.clipPath  = slices[0] ? `inset(0 0 ${100 - slices[0].h}% 0)` : 'inset(0 0 60% 0)';
-        glitchB.style.opacity = (chromaLife * 0.8).toString();
-        glitchB.style.transform = `translate(${cx * -1.4}px, ${cy * 0.9}px)`;
-        glitchB.style.clipPath  = slices[1] ? `inset(${slices[1].y}% 0 0 0)` : 'inset(40% 0 0 0)';
-      } else {
-        glitchR.style.opacity = glitchB.style.opacity = '0';
-        glitchMain.style.transform = ''; glitchMain.style.clipPath = 'none';
-      }
-    } else {
-      glitchR.style.opacity = glitchB.style.opacity = '0';
-      glitchMain.style.transform = ''; glitchMain.style.clipPath = 'none';
-    }
-
-    heroHello.style.transform = `translateX(${helloX}px) translateY(${helloY}px)`;
-    heroRoles.style.transform = `translateX(${rolesX}px) translateY(${rolesY}px)`;
-
+    // ── memoji: mid speed, drifts up ────────────────
     if (memoji) {
-      memoji.style.transform          = `translateY(${ease * -60 + memojiShakeY}px) translateX(${memojiShakeX}px)`;
-      memoji.style.opacity            = Math.max(0, 1 - ease * 1.2).toFixed(3);
-      memoji.style.filter             = '';
-      memoji.style.animationPlayState = p > 0.05 ? 'paused' : 'running';
+      memoji.style.transform          = `translateY(${ease * -28}px)`;
+      memoji.style.opacity            = Math.max(0, 1 - ease * 1.6).toFixed(3);
+      memoji.style.animationPlayState = raw > 0.04 ? 'paused' : 'running';
     }
+
+    // ── name: slowest, barely moves — last to vanish ─
+    heroName.style.transform = `translateY(${ease * -14}px)`;
+    heroName.style.opacity   = Math.max(0, 1 - ease * 1.2).toFixed(3);
+
+    // ── roles: drifts downward (opposite = depth) ───
+    if (heroRoles) {
+      heroRoles.style.transform = `translateY(${ease * 22}px)`;
+      heroRoles.style.opacity   = Math.max(0, 1 - ease * 1.9).toFixed(3);
+    }
+
+    // keep glitch layers clean
+    glitchR.style.opacity = glitchB.style.opacity = '0';
+    glitchMain.style.transform = '';
+    glitchMain.style.clipPath  = 'none';
   };
 
-  window._heroWheel = function(e) {
-    const sy    = window.scrollY;
-    const heroH = hero.offsetHeight;
-    const p     = Math.min(sy / (heroH * 0.65), 1);
-    if (p >= 1) return;
-    const dir = e.deltaY > 0 ? 1 : -1;
-    makeSlices();
-    glitchTicks = Math.floor(Math.random() * 6) + 4;
-    chromaX = (Math.random() - 0.5) * 28 + dir * 10;
-    chromaY = (Math.random() - 0.5) * 14;
-    chromaLife = 0.9 + Math.random() * 0.1;
-    scaleHit = 1 - dir * 0.022;
-    helloX = (Math.random() - 0.5) * 20; helloY = dir * -(Math.random() * 16 + 8);
-    rolesX = (Math.random() - 0.5) * 16; rolesY = dir * (Math.random() * 14 + 6);
-    memojiShakeX = (Math.random() - 0.5) * 14; memojiShakeY = dir * (Math.random() * 8 + 4);
-    if (p > 0.02) { burst(heroName, 22); if (p > 0.2) burst(heroRoles, 8); }
-  };
+  // wheel no longer triggers glitch — just let scroll drive the parallax
+  window._heroWheel = function() {};
 
   let cooldown = false;
   window.addEventListener('wheel', (e) => {
@@ -1215,10 +1258,10 @@ if (_aboutEl) {
 
 // ── AI Chat Widget ────────────────────────────────
 (() => {
-  const input    = document.getElementById('ai-input');
-  const sendBtn  = document.getElementById('ai-send');
-  const messages = document.getElementById('ai-messages');
-  const panel    = document.getElementById('ai-widget-panel');
+  const input     = document.getElementById('ai-input');
+  const sendBtn   = document.getElementById('ai-send');
+  const messages  = document.getElementById('ai-messages');
+  const panel     = document.getElementById('ai-widget-panel');
   const toggleBtn = document.getElementById('ai-widget-btn');
   const closeBtn  = document.getElementById('ai-chat-close');
   if (!input || !messages) return;
@@ -1226,7 +1269,6 @@ if (_aboutEl) {
   // ── Inject widget enhancement styles ──
   const style = document.createElement('style');
   style.textContent = `
-    /* Message entrance animation */
     .ai-msg-row {
       opacity: 0;
       transform: translateY(10px);
@@ -1236,16 +1278,10 @@ if (_aboutEl) {
       opacity: 1;
       transform: translateY(0);
     }
-
-    /* Scroll fade overlay at bottom of messages */
-    .ai-chat-messages {
-      position: relative;
-    }
+    .ai-chat-messages { position: relative; }
     .ai-scroll-fade {
       position: sticky;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      bottom: 0; left: 0; right: 0;
       height: 36px;
       background: linear-gradient(to bottom, transparent, rgba(9,5,18,0.92));
       pointer-events: none;
@@ -1256,8 +1292,6 @@ if (_aboutEl) {
       flex-shrink: 0;
     }
     .ai-scroll-fade.visible { opacity: 1; }
-
-    /* Suggested prompt chips */
     .ai-chips {
       display: flex;
       flex-wrap: wrap;
@@ -1292,56 +1326,35 @@ if (_aboutEl) {
       color: #fff;
       transform: translateY(-1px);
     }
-
-    /* Send button: morph icon to check */
     .ai-send-btn svg { transition: opacity 0.15s ease, transform 0.2s cubic-bezier(.22,1,.36,1); }
     .ai-send-btn.sent svg { opacity: 0; transform: scale(0.5) rotate(20deg); }
     .ai-send-check {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
       opacity: 0;
       transition: opacity 0.18s ease;
       pointer-events: none;
     }
     .ai-send-btn.sent .ai-send-check { opacity: 1; }
     .ai-send-check svg { width: 14px; height: 14px; color: #fff; }
-
-    /* Input shimmer sweep on focus */
-    .ai-input {
-      position: relative;
-    }
+    .ai-input { position: relative; }
     @keyframes inputShimmer {
       0%   { background-position: -200% center; }
       100% { background-position: 200% center; }
     }
     .ai-input:focus {
-      background-image: linear-gradient(
-        90deg,
-        rgba(124,58,237,0.06) 0%,
-        rgba(157,95,245,0.14) 50%,
-        rgba(124,58,237,0.06) 100%
-      );
+      background-image: linear-gradient(90deg, rgba(124,58,237,0.06) 0%, rgba(157,95,245,0.14) 50%, rgba(124,58,237,0.06) 100%);
       background-size: 200% 100%;
       animation: inputShimmer 1.8s ease infinite;
     }
-
-    /* Panel: spring open with blur */
-    .ai-widget-panel {
-      filter: blur(4px);
-    }
+    .ai-widget-panel { filter: blur(4px); }
     .ai-widget-panel.open {
       filter: blur(0px);
       transition: opacity 0.28s ease, transform 0.38s cubic-bezier(.22,1,.36,1), filter 0.28s ease !important;
     }
-
-    /* Typewriter cursor blink */
     .ai-typewriter-cursor {
       display: inline-block;
-      width: 2px;
-      height: 13px;
+      width: 2px; height: 13px;
       background: rgba(157,95,245,0.9);
       border-radius: 1px;
       margin-left: 2px;
@@ -1352,6 +1365,14 @@ if (_aboutEl) {
       0%, 100% { opacity: 1; }
       50% { opacity: 0; }
     }
+    .ai-bubble--bot a {
+      color: #c084fc;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color 0.15s;
+    }
+    .ai-bubble--bot a:hover { color: #fff; }
+    .ai-error-msg { color: rgba(255, 100, 100, 0.85) !important; }
   `;
   document.head.appendChild(style);
 
@@ -1373,7 +1394,7 @@ if (_aboutEl) {
   messages.addEventListener('scroll', updateScrollFade, { passive: true });
 
   // ── Suggested prompt chips ──
-  const CHIPS = ['What can Clark build?', 'How do I reach him?', 'What\'s the CASH33 Optimizer?'];
+  const CHIPS = ["What can Clark build?", "How do I hire him?", "What's the CASH33 Optimizer?"];
   const chipsEl = document.createElement('div');
   chipsEl.className = 'ai-chips';
   CHIPS.forEach(label => {
@@ -1387,7 +1408,6 @@ if (_aboutEl) {
     });
     chipsEl.appendChild(chip);
   });
-  // Insert chips above the input row
   const inputRow = document.querySelector('.ai-chat-input-row');
   if (inputRow) inputRow.parentNode.insertBefore(chipsEl, inputRow);
 
@@ -1399,34 +1419,46 @@ if (_aboutEl) {
   }
 
   // ── Toggle open/close ──
+  const floatLabel = document.querySelector('.ai-float-label');
+
   function openPanel() {
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
+    if (floatLabel) { floatLabel.style.opacity = '0'; floatLabel.style.pointerEvents = 'none'; floatLabel.style.visibility = 'hidden'; }
     input.focus();
     setTimeout(updateScrollFade, 50);
   }
   function closePanel() {
     panel.classList.remove('open');
     panel.setAttribute('aria-hidden', 'true');
+    if (floatLabel) { floatLabel.style.opacity = ''; floatLabel.style.pointerEvents = ''; floatLabel.style.visibility = ''; }
   }
   toggleBtn.addEventListener('click', () => panel.classList.contains('open') ? closePanel() : openPanel());
   closeBtn.addEventListener('click', closePanel);
 
-  const SYSTEM = `You are Clark's personal AI assistant embedded in his portfolio website.
+  // ── System prompt ──
+  const SYSTEM = `You are Clark AI — the personal assistant on Clark's portfolio website. Clark is a developer and community builder known online as "CASHv33" or "CASH33".
 
 About Clark:
-- Name: Clark, known online as "cash33"
-- He builds Windows optimization tools and runs the CASH33 community
-- His main project is the CASH33 Optimizer: a comprehensive Windows 10/11 batch optimizer with 18 tweak categories, interactive ASCII menu, system detection, and logging
-- He specializes in Windows tweaking, PC optimization, batch scripting, and dark themes
-- He runs a Discord server called the CASH33 Server
-- His GitHub username is @ZnqTvCSFrXDx
-- His site has sections: About, Work (projects), Socials, and Vault (files/downloads)
-- Two more projects are coming soon (no details yet)
-- The site is dark-themed, purple/violet aesthetic, glitchy and techy
-- He hasn't finished filling out all the site's information yet
+- Full name: Justin Clark Mendoza, goes by "Clark" or "Cash33"
+- Full-stack web developer and Windows systems admin/optimizer
+- Based in the Philippines, open to remote work
+- Email: justinclark.mendoza.official@gmail.com
+- GitHub: https://github.com/ZnqTvCSFrXDx
+- Discord server: https://discord.gg/wwVUFfnRpg
+- Instagram: @jzzztnclark
+- LinkedIn: available via the Socials section of this site
+- OnlineJobs.ph profile: v2.onlinejobs.ph/jobseekers/info/4672292 (open to work, part-time)
 
-Keep answers short, direct, and helpful. Don't make up details you don't know — just say Clark hasn't added that info yet. Never break character.`;
+Projects:
+- CASH33 Gaming Optimizer: a Windows 10/11 batch optimizer with 18 tweak categories (privacy, power, network, CPU, GPU, gaming, cleanup, apps), interactive ASCII menu, system detection, and logging
+- CASH33 Gaming Optimizer (C# GUI): a Windows Forms desktop app version with a custom toggle switch, live hardware monitoring (LibreHardwareMonitorLib), and PowerShell-executed optimizations
+- Point of System (POS): a Java/Swing/JDBC/MySQL desktop app with role-based access, inventory management, and receipt generation
+- More projects coming soon
+
+Skills: full-stack web dev, Windows systems, batch scripting, C#, Java, PowerShell, React, Node.js, SQL
+
+Tone: be conversational but professional — like a helpful colleague, not a robot. Keep replies concise and on point. If someone asks how to contact or hire Clark, share his email and relevant links naturally. If you don't know something, say Clark hasn't added that info yet — don't make things up. Never break character.`;
 
   const history = [];
 
@@ -1434,11 +1466,19 @@ Keep answers short, direct, and helpful. Don't make up details you don't know �
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  // ── Animate message entrance ──
   function revealMsg(row) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => row.classList.add('ai-msg-visible'));
     });
+  }
+
+  // ── Render markdown-lite: bold, links ──
+  function renderMarkdown(text) {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>')
+      .replace(/\n/g, '<br>');
   }
 
   function addMsg(text, type) {
@@ -1450,16 +1490,16 @@ Keep answers short, direct, and helpful. Don't make up details you don't know �
       messages.insertBefore(row, scrollFade);
       revealMsg(row);
     } else {
-      row.innerHTML = `
-        <div class="ai-bubble ai-bubble--${type}"></div>
-        <span class="ai-msg-time">${timeNow()}</span>
-      `;
+      row.innerHTML = `<div class="ai-bubble ai-bubble--${type}"></div><span class="ai-msg-time">${timeNow()}</span>`;
       messages.insertBefore(row, scrollFade);
       revealMsg(row);
 
       const bubble = row.querySelector('.ai-bubble');
       if (type === 'bot') {
         typewriterEffect(bubble, text);
+      } else if (type === 'error') {
+        bubble.classList.add('ai-error-msg');
+        bubble.textContent = text;
       } else {
         bubble.textContent = text;
       }
@@ -1470,14 +1510,13 @@ Keep answers short, direct, and helpful. Don't make up details you don't know �
     return row;
   }
 
-  // ── Typewriter effect ──
+  // ── Typewriter effect with markdown render at end ──
   function typewriterEffect(el, text) {
     let i = 0;
     const cursor = document.createElement('span');
     cursor.className = 'ai-typewriter-cursor';
     el.appendChild(cursor);
-
-    const speed = Math.max(12, Math.min(28, 2200 / text.length)); // adaptive speed
+    const speed = Math.max(10, Math.min(25, 2000 / text.length));
 
     function tick() {
       if (i < text.length) {
@@ -1487,48 +1526,71 @@ Keep answers short, direct, and helpful. Don't make up details you don't know �
         setTimeout(tick, speed);
       } else {
         cursor.remove();
+        // Swap plain text for rendered markdown after typewriter finishes
+        el.innerHTML = renderMarkdown(text);
         updateScrollFade();
       }
     }
     tick();
   }
 
-  // ── Send button morph ──
   function morphSendBtn() {
     sendBtn.classList.add('sent');
     setTimeout(() => sendBtn.classList.remove('sent'), 900);
   }
 
+  // ── Disable / enable input while waiting ──
+  function setLoading(loading) {
+    input.disabled = loading;
+    sendBtn.disabled = loading;
+  }
+
   async function send() {
     const val = input.value.trim();
-    if (!val) return;
+    if (!val || input.disabled) return;
     input.value = '';
     hideChips();
     morphSendBtn();
     addMsg(val, 'user');
     history.push({ role: 'user', content: val });
     const thinking = addMsg('', 'thinking');
+    setLoading(true);
+
     try {
-      const res = await fetch('http://localhost:3001', {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system: SYSTEM, messages: history })
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1024,
+          system: SYSTEM,
+          messages: history
+        })
       });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `HTTP ${res.status}`);
+      }
+
       const data = await res.json();
-      const reply = data.content?.[0]?.text ?? data.choices?.[0]?.message?.content ?? 'No response.';
+      const reply = data.content?.[0]?.text ?? 'No response.';
       history.push({ role: 'assistant', content: reply });
       thinking.remove();
       addMsg(reply, 'bot');
     } catch (e) {
       thinking.remove();
-      addMsg('Connection error. Is the server running?', 'bot');
+      addMsg(`Oops, that's on us — something went wrong on our end. Please try again in a moment.`, 'error');
+    } finally {
+      setLoading(false);
+      input.focus();
     }
   }
 
   sendBtn.addEventListener('click', send);
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) send(); });
 
-  // Animate the initial bot greeting message
+  // Animate initial greeting
   requestAnimationFrame(() => {
     const firstRow = messages.querySelector('.ai-msg-row');
     if (firstRow) {
