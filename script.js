@@ -3277,18 +3277,27 @@ if (dpSettings && settingsPanel) {
   // Load state from server on page load
   loadAndApplyState();
 
-  // ── SSE: listen for reload broadcast from admin ──
+  // ── SSE: live reload listener ──
   const SESSION_ID = Math.random().toString(36).slice(2);
   (() => {
-    const es = new EventSource(`${RENDER_URL}/events`);
-    es.addEventListener('reload', (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.from === SESSION_ID) return; // skip self-reload
-      } catch(_) {}
-      window.location.reload();
-    });
-    es.onerror = () => { /* SSE auto-reconnects */ };
+    let es;
+    function connectSSE() {
+      if (es) { try { es.close(); } catch(_) {} }
+      es = new EventSource(`${RENDER_URL}/events`);
+      es.addEventListener('reload', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.from === SESSION_ID) return;
+        } catch(_) {}
+        window.location.reload();
+      });
+      es.onerror = () => {
+        // on error, close and retry after 5s (handles server sleep/wake)
+        try { es.close(); } catch(_) {}
+        setTimeout(connectSSE, 5000);
+      };
+    }
+    connectSSE();
   })();
 
   // ── Keep-alive ping every 4 min to prevent Render spin-down ──
@@ -3298,30 +3307,59 @@ if (dpSettings && settingsPanel) {
 
   // ── Publish button ──
   const publishBtn = document.getElementById('settings-publish');
+
+  async function wakeServer(timeout = 20000) {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+      try {
+        const r = await fetch(`${RENDER_URL}/ping`, { cache: 'no-store' });
+        if (r.ok) return true;
+      } catch(_) {}
+      await new Promise(res => setTimeout(res, 1500));
+    }
+    return false;
+  }
+
   if (publishBtn) {
     publishBtn.addEventListener('click', async () => {
+      const label = publishBtn.querySelector('.settings-publish-label');
       publishBtn.classList.add('publishing');
-      publishBtn.querySelector('.settings-publish-label').textContent = 'Publishing...';
+      publishBtn.disabled = true;
+
+      // Step 1: wake server if sleeping
+      label.textContent = 'Waking...';
+      const alive = await wakeServer();
+      if (!alive) {
+        publishBtn.classList.remove('publishing');
+        publishBtn.disabled = false;
+        label.textContent = 'Server offline';
+        setTimeout(() => { label.textContent = 'Publish'; }, 3000);
+        return;
+      }
+
+      // Step 2: broadcast reload
+      label.textContent = 'Publishing...';
       try {
         const res = await fetch(`${RENDER_URL}/reload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: ADMIN_PASS, sessionId: SESSION_ID })
         });
-        const data = await res.json();
+        if (!res.ok) throw new Error('Bad response: ' + res.status);
         publishBtn.classList.remove('publishing');
         publishBtn.classList.add('published');
-        publishBtn.querySelector('.settings-publish-label').textContent = `Pushed ✓`;
+        label.textContent = 'Pushed ✓';
         setTimeout(() => {
           publishBtn.classList.remove('published');
-          publishBtn.querySelector('.settings-publish-label').textContent = 'Publish';
+          label.textContent = 'Publish';
         }, 2500);
       } catch(e) {
+        console.error('Publish error:', e);
         publishBtn.classList.remove('publishing');
-        publishBtn.querySelector('.settings-publish-label').textContent = 'Failed';
-        setTimeout(() => {
-          publishBtn.querySelector('.settings-publish-label').textContent = 'Publish';
-        }, 2000);
+        label.textContent = 'Failed';
+        setTimeout(() => { label.textContent = 'Publish'; }, 2500);
+      } finally {
+        publishBtn.disabled = false;
       }
     });
   }
