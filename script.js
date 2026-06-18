@@ -1436,14 +1436,50 @@ if (_aboutEl) {
   toggleBtn.addEventListener('click', () => panel.classList.contains('open') ? closePanel() : openPanel());
   closeBtn.addEventListener('click', closePanel);
 
-  // ── System prompt ──
-  const SYSTEM = `You are Clark AI — the personal assistant on Clark's portfolio website. Clark is a developer known online as "CASH33".
+  // ── System prompt (dynamic — reflects current site state) ──
+  function buildSystem() {
+    // Read current display name
+    const nameEl = document.querySelector('.contact-name');
+    const displayName = nameEl ? nameEl.innerText.replace(/\n/g, ' ').trim() : 'Justin Clark Mendoza';
+
+    // Read email visibility
+    const emailPill = document.getElementById('contact-email-pill');
+    const emailHidden = emailPill && emailPill.classList.contains('restricted-email');
+    const emailLine = emailHidden
+      ? '- Email: [private — not available at this time]'
+      : '- Email: justinclark.mendoza.official@gmail.com';
+
+    // Read social visibility
+    function socialLine(platform, label, value) {
+      const card = document.querySelector(`.social-card[data-platform="${platform}"]`);
+      const hidden = card && card.classList.contains('restricted');
+      return hidden ? `- ${label}: [private — not available at this time]` : `- ${label}: ${value}`;
+    }
+
+    const githubLine    = socialLine('github',     'GitHub',       'https://github.com/ZnqTvCSFrXDx');
+    const discordLine   = socialLine('discord',    'Discord',      'https://discord.gg/wwVUFfnRpg');
+    const igLine        = socialLine('instagram',  'Instagram',    '@jzzztnclark');
+    const linkedinLine  = socialLine('linkedin',   'LinkedIn',     'available via the Socials section of this site');
+    const ojLine        = socialLine('onlinejobs', 'OnlineJobs.ph','v2.onlinejobs.ph/jobseekers/info/4672292');
+
+    // Build fallback contact suggestion based on what's visible
+    const discordCard = document.querySelector('.social-card[data-platform="discord"]');
+    const discordHidden = discordCard && discordCard.classList.contains('restricted');
+
+    let fallbackParts = [];
+    if (!discordHidden) fallbackParts.push('[Discord](https://discord.gg/wwVUFfnRpg)');
+    if (!emailHidden) fallbackParts.push('[justinclark.mendoza.official@gmail.com](mailto:justinclark.mendoza.official@gmail.com)');
+    const fallbackContact = fallbackParts.length > 0
+      ? `Reach him via ${fallbackParts.join(' or ')} to know more.`
+      : 'Clark has limited contact options available right now. Check back later.';
+
+    return `You are Clark AI — the personal assistant on Clark's portfolio website. Clark is a developer known online as "CASH33".
 
 Who is Clark:
 Clark is a full-stack web developer with solid experience in Windows troubleshooting, PC optimization, and custom scripting. He communicates clearly, listens well, and genuinely cares about delivering what his skills can offer. His main goal is to grow through real experience while providing reliable, quality work to every client he works with.
 
 About Clark:
-- Full name: Justin Clark Mendoza, goes by "Clark" or "Cash33"
+- Full name: ${displayName}, goes by "Clark" or "Cash33"
 - Based in the Philippines, open to both local and international clients
 - 1 year of hands-on experience
 - Available for part-time work
@@ -1451,12 +1487,12 @@ About Clark:
 - Preferred contact: Email or Discord
 
 Contact & Socials:
-- Email: justinclark.mendoza.official@gmail.com
-- GitHub: https://github.com/ZnqTvCSFrXDx
-- Discord: https://discord.gg/wwVUFfnRpg
-- Instagram: @jzzztnclark
-- LinkedIn: available via the Socials section of this site
-- OnlineJobs.ph: v2.onlinejobs.ph/jobseekers/info/4672292
+${emailLine}
+${githubLine}
+${discordLine}
+${igLine}
+${linkedinLine}
+${ojLine}
 
 Projects:
 - Point of System (POS): a Java/Swing/JDBC/MySQL desktop app with role-based access, inventory management, and receipt generation
@@ -1506,7 +1542,9 @@ Support & Revisions:
 Target Clients:
 - Open to everyone — no niche restriction, works with all types of clients locally and internationally
 
-Tone: be confident but approachable. Keep every reply short, simple, and direct — no long paragraphs, no unnecessary filler. Answer only what was asked. If someone asks how to contact or hire Clark, share his email and Discord naturally. If you don't know something or Clark hasn't shared it, say: "Clark preferred not to share that information yet. Reach him on [Discord](https://discord.gg/wwVUFfnRpg) or email him at [justinclark.mendoza.official@gmail.com](mailto:justinclark.mendoza.official@gmail.com) to know more." Never make things up. Never break character.`
+Tone: be confident but approachable. Keep every reply short, simple, and direct — no long paragraphs, no unnecessary filler. Answer only what was asked. If someone asks how to contact or hire Clark, share only the contact info that is currently available (not private). If you don't know something or Clark hasn't shared it, say: "Clark preferred not to share that information yet. ${fallbackContact}" Never make things up. Never break character. Never reveal private information marked as [private].`;
+  }
+
 
   const history = [];
 
@@ -1609,7 +1647,7 @@ Tone: be confident but approachable. Keep every reply short, simple, and direct 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          system: SYSTEM,
+          system: buildSystem(),
           messages: history
         })
       });
@@ -2772,7 +2810,8 @@ console.log("BOTTOM OF SCRIPT");
     const copyLabel = emailPill.querySelector('.contact-email-copy-label');
     let hasCopied = false;
 
-    emailPill.addEventListener('click', () => {
+    emailPill.addEventListener('click', (e) => {
+      if (emailPill.classList.contains('restricted-email')) { e.stopImmediatePropagation(); return; }
       navigator.clipboard.writeText('justinclark.mendoza.official@gmail.com').then(() => {
         hasCopied = true;
         emailPill.classList.add('copied');
@@ -2995,19 +3034,283 @@ console.log("BOTTOM OF SCRIPT");
     Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v));
     document.body.classList.toggle('theme-light', name === 'light');
     document.body.classList.toggle('theme-dark',  name === 'dark');
-    // Update active state on buttons
-    document.querySelectorAll('.dev-portal-theme-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.theme === name);
-    });
     localStorage.setItem('cash33-theme', name);
+    // Update merged toggle icon and label
+    const iconDark = document.querySelector('#dp-theme-toggle .icon-dark');
+    const iconLight = document.querySelector('#dp-theme-toggle .icon-light');
+    const themeLabel = document.getElementById('theme-label');
+    if (iconDark && iconLight && themeLabel) {
+      if (name === 'dark') {
+        iconDark.style.display = ''; iconLight.style.display = 'none';
+        themeLabel.textContent = 'Dark';
+      } else {
+        iconDark.style.display = 'none'; iconLight.style.display = '';
+        themeLabel.textContent = 'Light';
+      }
+    }
   }
 
   // Apply saved theme on load
   const saved = localStorage.getItem('cash33-theme') || 'dark';
   applyTheme(saved);
 
-  // Wire up buttons
-  document.querySelectorAll('.dev-portal-theme-btn').forEach(btn => {
-    btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
-  });
+  // Wire up merged toggle button
+  const themeToggleBtn = document.getElementById('dp-theme-toggle');
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const current = localStorage.getItem('cash33-theme') || 'dark';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+  }
 })();
+// ── Admin Settings Panel ─────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+const dpSettings = document.getElementById('dp-settings');
+const settingsPanel = document.getElementById('settings-panel');
+const settingsClose = document.getElementById('settings-close');
+const toggleSocials = document.getElementById('toggle-socials');
+const adminPrompt = document.getElementById('admin-prompt');
+const adminPassword = document.getElementById('admin-password');
+const adminConfirm = document.getElementById('admin-confirm');
+const adminCancel = document.getElementById('admin-cancel');
+const adminError = document.getElementById('admin-error');
+
+const ADMIN_PASS = '013301516002';
+let adminUnlocked = false;
+
+if (dpSettings && settingsPanel) {
+  dpSettings.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (adminUnlocked) {
+      settingsPanel.classList.toggle('open');
+    } else {
+      adminPrompt.classList.add('open');
+      adminPassword.value = '';
+      adminError.textContent = '';
+      setTimeout(() => adminPassword.focus(), 100);
+    }
+  });
+
+  adminConfirm.addEventListener('click', () => {
+    if (adminPassword.value === ADMIN_PASS) {
+      adminUnlocked = true;
+      adminPrompt.classList.remove('open');
+      setTimeout(() => settingsPanel.classList.add('open'), 280);
+    } else {
+      adminError.textContent = 'Incorrect password.';
+      adminPassword.value = '';
+      adminPassword.focus();
+    }
+  });
+
+  adminPassword.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') adminConfirm.click();
+    if (e.key === 'Escape') adminCancel.click();
+  });
+
+  adminCancel.addEventListener('click', () => {
+    adminPrompt.classList.remove('open');
+  });
+
+  settingsClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    settingsPanel.classList.remove('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (settingsPanel.classList.contains('open') &&
+        !settingsPanel.contains(e.target) &&
+        !dpSettings.contains(e.target)) {
+      settingsPanel.classList.remove('open');
+    }
+  });
+
+  // Per-card social toggles
+  const PLATFORM_LABELS = {
+    github:     'GitHub',
+    discord:    'Discord',
+    instagram:  'Instagram',
+    linkedin:   'LinkedIn',
+    onlinejobs: 'OnlineJobs',
+  };
+
+  const LOCK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+
+  function createRestrictedOverlay(label) {
+    const el = document.createElement('div');
+    el.className = 'restricted-overlay';
+    el.innerHTML = `<div class="restricted-overlay-icon">${LOCK_SVG}</div><span class="restricted-overlay-label">${label}</span>`;
+    return el;
+  }
+
+  function bindSocialToggle(id, platform) {
+    const toggle = document.getElementById(id);
+    if (!toggle) return;
+    toggle.addEventListener('change', () => {
+      const card = document.querySelector(`.social-card[data-platform="${platform}"]`);
+      if (!card) return;
+      const isRestricted = !toggle.checked;
+      card.classList.toggle('restricted', isRestricted);
+      const existing = card.querySelector('.restricted-overlay');
+      if (isRestricted && !existing) {
+        card.appendChild(createRestrictedOverlay(PLATFORM_LABELS[platform] || platform));
+      } else if (!isRestricted && existing) {
+        existing.remove();
+      }
+      saveState({ socials: { ...getCurrentSocialsState(), [platform]: toggle.checked } });
+    });
+  }
+
+  function getCurrentSocialsState() {
+    const platforms = ['github','discord','instagram','linkedin','onlinejobs'];
+    const state = {};
+    platforms.forEach(p => {
+      const card = document.querySelector(`.social-card[data-platform="${p}"]`);
+      state[p] = card ? !card.classList.contains('restricted') : true;
+    });
+    return state;
+  }
+  // Contact name input
+  const contactNameInput = document.getElementById('contact-name-input');
+  const contactNameApply = document.getElementById('contact-name-apply');
+  const contactNameEl = document.querySelector('.contact-name');
+
+  if (contactNameApply && contactNameEl) {
+    contactNameApply.addEventListener('click', () => {
+      const val = contactNameInput.value.trim();
+      const footerName = document.querySelector('.footer-name');
+      if (val) {
+        contactNameEl.innerHTML = val;
+        if (footerName) footerName.textContent = val;
+        saveState({ displayName: val });
+      } else {
+        contactNameEl.innerHTML = 'Justin Clark<br>Mendoza';
+        if (footerName) footerName.textContent = 'Justin Clark';
+        saveState({ displayName: '' });
+      }
+    });
+    contactNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') contactNameApply.click();
+    });
+  }
+
+  // Email toggle + input
+  const toggleEmail = document.getElementById('toggle-email');
+  const contactEmailInput = document.getElementById('contact-email-input');
+  const contactEmailApply = document.getElementById('contact-email-apply');
+  const contactEmailText = document.querySelector('.contact-email-text');
+  const contactEmailPill = document.getElementById('contact-email-pill');
+
+  const REAL_EMAIL = 'justinclark.mendoza.official@gmail.com';
+  const HIDDEN_EMAIL = '••••••••@••••.com';
+
+  const RENDER_URL = 'https://cash-github-io.onrender.com';
+
+  // Save state to Render
+  async function saveState(patch) {
+    try {
+      await fetch(`${RENDER_URL}/state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: ADMIN_PASS, state: patch })
+      });
+    } catch(e) { console.warn('State save failed:', e); }
+  }
+
+  // Load state from Render and apply to UI
+  async function loadAndApplyState() {
+    try {
+      const res = await fetch(`${RENDER_URL}/state`);
+      if (!res.ok) return;
+      const state = await res.json();
+
+      if (state.displayName) {
+        const nameEl = document.querySelector('.contact-name');
+        const footerName = document.querySelector('.footer-name');
+        if (nameEl) nameEl.innerHTML = state.displayName;
+        if (footerName) footerName.textContent = state.displayName;
+        const contactNameInput = document.getElementById('contact-name-input');
+        if (contactNameInput) contactNameInput.value = state.displayName;
+      }
+
+      applyEmailVisibility(state.showEmail !== false);
+
+      const PLATFORM_LABELS_MAP = {
+        github: 'GitHub', discord: 'Discord', instagram: 'Instagram',
+        linkedin: 'LinkedIn', onlinejobs: 'OnlineJobs'
+      };
+      Object.entries(state.socials || {}).forEach(([platform, visible]) => {
+        const card = document.querySelector(`.social-card[data-platform="${platform}"]`);
+        const toggle = document.getElementById(`toggle-${platform}`);
+        if (!card) return;
+        const shouldRestrict = !visible;
+        card.classList.toggle('restricted', shouldRestrict);
+        if (toggle) toggle.checked = visible;
+        const existing = card.querySelector('.restricted-overlay');
+        if (shouldRestrict && !existing) {
+          card.appendChild(createRestrictedOverlay(PLATFORM_LABELS_MAP[platform] || platform));
+        } else if (!shouldRestrict && existing) {
+          existing.remove();
+        }
+      });
+    } catch(e) { console.warn('State load failed:', e); }
+  }
+
+  function applyEmailVisibility(visible) {
+    if (!contactEmailPill || !contactEmailText) return;
+    if (visible) {
+      contactEmailPill.classList.remove('restricted-email');
+      contactEmailText.textContent = REAL_EMAIL;
+      const existing = contactEmailPill.querySelector('.restricted-overlay');
+      if (existing) existing.remove();
+    } else {
+      contactEmailPill.classList.add('restricted-email');
+      contactEmailText.textContent = HIDDEN_EMAIL;
+      if (!contactEmailPill.querySelector('.restricted-overlay')) {
+        contactEmailPill.appendChild(createRestrictedOverlay('Email'));
+      }
+    }
+    if (toggleEmail) toggleEmail.checked = visible;
+  }
+
+  // Load state from server on page load
+  loadAndApplyState();
+
+  if (toggleEmail) {
+    toggleEmail.addEventListener('change', () => {
+      applyEmailVisibility(toggleEmail.checked);
+      saveState({ showEmail: toggleEmail.checked });
+    });
+  }
+
+  if (contactEmailApply && contactEmailText) {
+    contactEmailApply.addEventListener('click', () => {
+      const val = contactEmailInput.value.trim();
+      const isVisible = !contactEmailPill.classList.contains('restricted-email');
+      const nameEl = document.querySelector('.contact-name');
+      const footerName = document.querySelector('.footer-name');
+      if (val) {
+        contactEmailText.textContent = isVisible ? val : HIDDEN_EMAIL;
+        if (nameEl) nameEl.innerHTML = val;
+        if (footerName) footerName.textContent = val;
+        saveState({ displayName: val });
+      } else {
+        contactEmailText.textContent = isVisible ? REAL_EMAIL : HIDDEN_EMAIL;
+        if (nameEl) nameEl.innerHTML = 'Justin Clark<br>Mendoza';
+        if (footerName) footerName.textContent = 'Justin Clark';
+        saveState({ displayName: '' });
+      }
+    });
+    contactEmailInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') contactEmailApply.click();
+    });
+  }
+
+  bindSocialToggle('toggle-github', 'github');
+  bindSocialToggle('toggle-discord', 'discord');
+  bindSocialToggle('toggle-instagram', 'instagram');
+  bindSocialToggle('toggle-linkedin', 'linkedin');
+  bindSocialToggle('toggle-onlinejobs', 'onlinejobs');
+}
+}); // end DOMContentLoaded

@@ -4840,3 +4840,468 @@ html {
   align-self: flex-start;
   padding-left: 2px;
 }
+/* ── Settings Panel ───────────────────────────────── */
+.settings-panel {
+  position: fixed;
+  left: 140px;
+  top: 50%;
+  transform: translateY(-50%) scale(0.95);
+  width: 360px;
+  background: rgba(10, 8, 20, 0.97);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04),
+    0 0 40px 8px rgba(100, 40, 200, 0.2),
+    0 8px 40px rgba(0,0,0,0.6);
+  z-index: 9998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(.22,1,.36,1);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.settings-panel.open {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(-50%) scale(1);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.settings-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(200, 170, 255, 0.9);
+  letter-spacing: 0.04em;
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255,255,255,0.4);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+  padding: 0;
+}
+.settings-close:hover {
+  color: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.08);
+}
+.settings-close svg { width: 14px; height: 14px; }
+
+.settings-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-section-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-row-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+}
+
+.settings-hint {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  color: rgba(255,255,255,0.25);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Toggle switch */
+.settings-toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+.settings-toggle input { opacity: 0; width: 0; height: 0; }
+.settings-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.1);
+  border-radius: 999px;
+  transition: background 0.25s ease;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.settings-toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 2px;
+  top: 2px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 50%;
+  transition: transform 0.25s cubic-bezier(.22,1,.36,1), background 0.25s ease;
+}
+.settings-toggle input:checked + .settings-toggle-slider {
+  background: rgba(124, 58, 237, 0.8);
+  border-color: rgba(124, 58, 237, 0.6);
+}
+.settings-toggle input:checked + .settings-toggle-slider::before {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+.settings-category {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.settings-category:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.settings-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-row-desc {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  color: rgba(255,255,255,0.25);
+}
+
+.settings-row--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.settings-badge {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(180, 130, 255, 0.8);
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.settings-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Admin Password Prompt ───────────────────────── */
+.admin-prompt {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.admin-prompt.open {
+  opacity: 1;
+  pointer-events: all;
+}
+.admin-prompt-box {
+  background: linear-gradient(160deg, rgba(18, 12, 35, 0.98), rgba(8, 6, 20, 0.99));
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-radius: 20px;
+  padding: 36px 28px 28px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04),
+    0 0 60px 12px rgba(100, 40, 200, 0.2),
+    0 24px 60px rgba(0,0,0,0.6);
+  transform: translateY(8px);
+  transition: transform 0.25s cubic-bezier(.22,1,.36,1);
+}
+.admin-prompt.open .admin-prompt-box {
+  transform: translateY(0);
+}
+.admin-prompt-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+.admin-prompt-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(220, 200, 255, 0.95);
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+.admin-prompt-subtitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  color: rgba(255,255,255,0.25);
+  text-align: center;
+  margin-top: -10px;
+}
+.admin-prompt-input-wrap {
+  position: relative;
+  width: 100%;
+}
+.admin-prompt-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: rgba(255,255,255,0.25);
+  pointer-events: none;
+}
+.admin-prompt-input {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 12px;
+  padding: 11px 14px 11px 36px;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.admin-prompt-input:focus {
+  border-color: rgba(124, 58, 237, 0.7);
+  background: rgba(124, 58, 237, 0.06);
+}
+.admin-prompt-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.admin-prompt-btn {
+  flex: 1;
+  padding: 11px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.admin-prompt-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.admin-prompt-btn:active { transform: translateY(0); }
+.admin-prompt-cancel {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.5);
+}
+.admin-prompt-confirm {
+  background: linear-gradient(135deg, rgba(139, 68, 255, 0.9), rgba(100, 40, 200, 0.95));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35);
+}
+.admin-prompt-error {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  color: rgba(255, 100, 100, 0.85);
+  text-align: center;
+  min-height: 14px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Social Card Restricted State ───────────────── */
+.social-card.restricted {
+  pointer-events: none;
+  position: relative;
+  overflow: hidden;
+}
+/* Blur everything inside except the overlay */
+.social-card.restricted > *:not(.restricted-overlay) {
+  filter: blur(10px);
+  user-select: none;
+  transition: filter 0.3s ease;
+}
+/* Dark overlay */
+.social-card.restricted::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 3, 15, 0.6);
+  z-index: 1;
+  pointer-events: none;
+}
+/* Injected lock overlay */
+.restricted-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+  animation: restrictedFadeIn 0.25s ease;
+}
+@keyframes restrictedFadeIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.restricted-overlay-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(8, 5, 20, 0.9);
+  border: 1px solid rgba(124, 58, 237, 0.45);
+  box-shadow: 0 0 18px 4px rgba(124, 58, 237, 0.18), 0 0 0 4px rgba(124,58,237,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(180, 140, 255, 0.95);
+}
+.restricted-overlay-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.restricted-overlay-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: rgba(180, 140, 255, 0.7);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── Settings Text Input ─────────────────────────── */
+.settings-input-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.settings-text-input {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 0;
+}
+.settings-text-input:focus {
+  border-color: rgba(124, 58, 237, 0.7);
+  background: rgba(124, 58, 237, 0.06);
+}
+.settings-text-input::placeholder {
+  color: rgba(255,255,255,0.2);
+}
+.settings-apply-btn {
+  background: linear-gradient(135deg, rgba(139, 68, 255, 0.85), rgba(100, 40, 200, 0.9));
+  border: none;
+  border-radius: 10px;
+  padding: 9px 14px;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  white-space: nowrap;
+}
+.settings-apply-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.settings-apply-btn:active { transform: translateY(0); }
+
+/* ── Contact Email Restricted ────────────────────── */
+#contact-email-pill.restricted-email {
+  position: relative;
+  pointer-events: none !important;
+  overflow: hidden;
+  cursor: default !important;
+}
+#contact-email-pill.restricted-email > *:not(.restricted-overlay) {
+  filter: blur(6px);
+  user-select: none;
+  pointer-events: none !important;
+}
+#contact-email-pill.restricted-email::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 3, 15, 0.5);
+  z-index: 1;
+}
+#contact-email-pill.restricted-email::after {
+  content: none;
+}
+/* Pill restricted overlay — smaller variant */
+#contact-email-pill .restricted-overlay {
+  gap: 4px;
+  padding-bottom: 2px;
+}
+#contact-email-pill .restricted-overlay-icon {
+  width: 24px;
+  height: 24px;
+}
+#contact-email-pill .restricted-overlay-icon svg {
+  width: 11px;
+  height: 11px;
+}
+#contact-email-pill .restricted-overlay-label {
+  font-size: 7.5px;
+  letter-spacing: 0.16em;
+  margin-top: -1px;
+}
