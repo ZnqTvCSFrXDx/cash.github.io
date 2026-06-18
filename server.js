@@ -58,8 +58,9 @@ http.createServer((req, res) => {
     req.on('end', () => {
       let p; try { p = JSON.parse(body2); } catch(e) { res.writeHead(400); res.end(); return; }
       if (p.password !== ADMIN_PASS) { res.writeHead(403); res.end(); return; }
+      const senderId = p.sessionId || '';
       sseClients.forEach(client => client.write('event: reload
-data: 1
+data: ' + JSON.stringify({ from: senderId }) + '
 
 '));
       console.log(`Reload broadcast to ${sseClients.size} client(s)`);

@@ -3278,10 +3278,23 @@ if (dpSettings && settingsPanel) {
   loadAndApplyState();
 
   // ── SSE: listen for reload broadcast from admin ──
+  const SESSION_ID = Math.random().toString(36).slice(2);
   (() => {
     const es = new EventSource(`${RENDER_URL}/events`);
-    es.addEventListener('reload', () => window.location.reload());
+    es.addEventListener('reload', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.from === SESSION_ID) return; // skip self-reload
+      } catch(_) {}
+      window.location.reload();
+    });
+    es.onerror = () => { /* SSE auto-reconnects */ };
   })();
+
+  // ── Keep-alive ping every 4 min to prevent Render spin-down ──
+  setInterval(async () => {
+    try { await fetch(`${RENDER_URL}/ping`); } catch(_) {}
+  }, 4 * 60 * 1000);
 
   // ── Publish button ──
   const publishBtn = document.getElementById('settings-publish');
@@ -3293,7 +3306,7 @@ if (dpSettings && settingsPanel) {
         const res = await fetch(`${RENDER_URL}/reload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: ADMIN_PASS })
+          body: JSON.stringify({ password: ADMIN_PASS, sessionId: SESSION_ID })
         });
         const data = await res.json();
         publishBtn.classList.remove('publishing');
