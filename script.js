@@ -2887,23 +2887,9 @@ console.log("BOTTOM OF SCRIPT");
 
     submitBtn.disabled = true;
     submitTxt.textContent = 'SENDING...';
-    statusMsg.textContent = 'Waking up server...';
-    statusMsg.className = 'contact-status-msg';
-
-    const RENDER = 'https://cash-github-io.onrender.com';
-    const deadline = Date.now() + 30000;
-    while (Date.now() < deadline) {
-      try {
-        const ping = await fetch(`${RENDER}/ping`, { cache: 'no-store' });
-        if (ping.ok) break;
-      } catch(_) {}
-      await new Promise(r => setTimeout(r, 2000));
-    }
-
-    statusMsg.textContent = 'Sending...';
 
     try {
-      const res = await fetch(`${RENDER}/contact`, {
+      const res = await fetch('https://formspree.io/f/mrevwgnw', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, subject, message })
