@@ -1,7 +1,7 @@
 const http = require('http');
 const https = require('https');
 
-const API_KEY = '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';
+const API_KEY = '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';
 
 http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
