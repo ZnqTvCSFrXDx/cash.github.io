@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
 
-const API_KEY   = process.env.GROQ_API_KEY;
+const API_KEY    = process.env.GROQ_API_KEY;
 const ADMIN_PASS = process.env.ADMIN_PASS || '013301516002';
 
 const mailer = nodemailer.createTransport({
@@ -14,6 +14,9 @@ const mailer = nodemailer.createTransport({
     pass: process.env.GMAIL_PASS,
   }
 });
+
+console.log('GMAIL_USER:', process.env.GMAIL_USER ? 'SET' : 'MISSING');
+console.log('GMAIL_PASS:', process.env.GMAIL_PASS ? 'SET' : 'MISSING');
 
 // ── Persistent state via JSON file ──
 const STATE_FILE = path.join(__dirname, 'admin_state.json');
@@ -36,7 +39,6 @@ function loadState() {
     if (fs.existsSync(STATE_FILE)) {
       const raw = fs.readFileSync(STATE_FILE, 'utf8');
       const saved = JSON.parse(raw);
-      // Deep merge with defaults so new keys are always present
       return {
         ...DEFAULT_STATE,
         ...saved,
@@ -102,11 +104,12 @@ http.createServer((req, res) => {
   req.on('data', d => body += d);
   req.on('end', async () => {
     console.log('POST', req.url, body);
+
     let parsed;
     try { parsed = body ? JSON.parse(body) : {}; }
     catch(e) { res.writeHead(400); res.end('Bad JSON'); return; }
 
-    // ── POST /reload — broadcast SSE reload ──
+    // ── POST /reload ──
     if (req.url === '/reload') {
       if (parsed.password !== ADMIN_PASS) { res.writeHead(403); res.end(); return; }
       const senderId = parsed.sessionId || '';
@@ -119,14 +122,13 @@ http.createServer((req, res) => {
       return;
     }
 
-    // ── POST /state — save admin state ──
+    // ── POST /state ──
     if (req.url === '/state') {
       if (parsed.password !== ADMIN_PASS) {
         res.writeHead(403, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Unauthorized' })); return;
       }
       const patch = parsed.state || {};
-      // Deep merge: handle socials nested object properly
       adminState = {
         ...adminState,
         ...patch,
@@ -153,9 +155,11 @@ http.createServer((req, res) => {
           subject: `[Portfolio] ${subject}`,
           text: `From: ${name} <${email}>\n\n${message}`,
         });
+        console.log('Email sent successfully');
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true })); return;
       } catch(e) {
+        console.error('Mailer error:', e.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: e.message })); return;
       }
