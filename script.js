@@ -186,22 +186,19 @@ console.log("script loaded");
   }
 })();
 
-// ── Page indicator (capsule scroll fill) ──────────
+// ── Page indicator — driven by master RAF, no extra scroll listener ──
 (() => {
   const fill = document.getElementById('page-nav-fill');
   if (!fill) return;
-
-  function update() {
-    const scrollTop = window.scrollY;
-    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-    const pct = docHeight > 0 ? (scrollTop / docHeight) : 0;
-    // scaleY is compositor-only (no layout), height triggers layout
-    fill.style.transform = `scaleY(${Math.min(1, Math.max(0, pct)).toFixed(4)})`;
-  }
-
-  window.addEventListener('scroll', update, { passive: true });
-  window.addEventListener('resize', update);
-  update();
+  let _docH = document.documentElement.scrollHeight - window.innerHeight;
+  window.addEventListener('resize', () => {
+    _docH = document.documentElement.scrollHeight - window.innerHeight;
+  }, { passive: true });
+  window._pageNavTick = function(sy) {
+    if (_docH <= 0) return;
+    const pct = Math.min(1, Math.max(0, sy / _docH));
+    fill.style.transform = `scaleY(${pct.toFixed(4)})`;
+  };
 })();
 
 
@@ -289,14 +286,18 @@ const fadeObs = new IntersectionObserver((entries) => {
       e.target.style.opacity = '1';
       e.target.style.transform = 'translateY(0)';
       fadeObs.unobserve(e.target);
+      // Free GPU layer after animation completes
+      setTimeout(() => { e.target.style.willChange = 'auto'; }, 700);
     }
   });
 }, { threshold: 0.06 });
 fadeGroups.forEach(group => {
   group.forEach((el, i) => {
     el.style.opacity = '0';
-    el.style.transform = 'translateY(28px)';
-    el.style.transition = `opacity 0.6s cubic-bezier(.22,1,.36,1) ${i * 0.08}s, transform 0.6s cubic-bezier(.22,1,.36,1) ${i * 0.08}s, color 0.4s ease`;
+    el.style.transform = 'translateY(24px)';
+    el.style.willChange = 'opacity, transform';
+    // Drop color transition — not needed in this reveal
+    el.style.transition = `opacity 0.55s cubic-bezier(.22,1,.36,1) ${i * 0.07}s, transform 0.55s cubic-bezier(.22,1,.36,1) ${i * 0.07}s`;
     fadeObs.observe(el);
   });
 });
@@ -398,19 +399,17 @@ fadeGroups.forEach(group => {
     }));
   }
 
-  function checkAbout() {
-    const rect = aboutSection.getBoundingClientRect();
-    const visible = rect.top < window.innerHeight * 0.8 && rect.bottom > 0;
-
-    if (visible && !isShown) {
-      revealWords();
-    } else if (!visible) {
-      isShown = false;
-    }
-  }
-
-  window.addEventListener('scroll', checkAbout, { passive: true });
-  checkAbout();
+  // Use IntersectionObserver — zero scroll cost
+  const aboutIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && !isShown) {
+        revealWords();
+      } else if (!e.isIntersecting) {
+        isShown = false;
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -10% 0px' });
+  aboutIO.observe(aboutSection);
 })();
 
 // ── Reactive memoji follows cursor ────────────────
@@ -455,10 +454,18 @@ fadeGroups.forEach(group => {
     }
   };
 
-  setInterval(() => {
-    lids.forEach(l => l.setAttribute('height', '40'));
-    setTimeout(() => lids.forEach(l => l.setAttribute('height', '0')), 130);
-  }, 4200);
+  // Blink driven by RAF timestamp — no setInterval
+  let _blinkNext = 0;
+  const _origMemojiTick = window._memojiTick;
+  window._memojiTick = function(ts) {
+    _origMemojiTick();
+    if (!ts) return;
+    if (ts > _blinkNext) {
+      lids.forEach(l => l.setAttribute('height', '40'));
+      setTimeout(() => lids.forEach(l => l.setAttribute('height', '0')), 130);
+      _blinkNext = ts + 4200 + Math.random() * 1000;
+    }
+  };
 })();
 
 // ── Orbit rings animation ─────────────────────────
@@ -589,9 +596,12 @@ fadeGroups.forEach(group => {
   window.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; if (!locked) ring.style.opacity = '1'; }, { passive: true });
 
   window._cursorTick = function() {
-    rx += (mx - rx) * 0.22;
-    ry += (my - ry) * 0.22;
-    if (!locked) { ring.style.transform = `translate(calc(${rx}px - 50%), calc(${ry}px - 50%))`; }
+    rx += (mx - rx) * 0.18;
+    ry += (my - ry) * 0.18;
+    if (!locked) {
+      // translate3d keeps this on the compositor thread
+      ring.style.transform = `translate3d(calc(${rx}px - 50%), calc(${ry}px - 50%), 0)`;
+    }
   };
 
 
@@ -605,7 +615,7 @@ fadeGroups.forEach(group => {
     const cy = r.top  + r.height / 2;
     locked = true;
     ring.style.transition = 'none';
-    ring.style.transform = `translate(calc(${rx}px - 50%), calc(${ry}px - 50%))`;
+    ring.style.transform = `translate3d(calc(${rx}px - 50%), calc(${ry}px - 50%), 0)`;
     requestAnimationFrame(() => {
       ring.classList.add('nav-merge');
       ring.classList.remove('clicking', 'hovering');
@@ -613,7 +623,7 @@ fadeGroups.forEach(group => {
         'transform 0.55s cubic-bezier(.22,1,.36,1), ' +
         'width 0.55s cubic-bezier(.22,1,.36,1), height 0.55s cubic-bezier(.22,1,.36,1), ' +
         'border-radius 0.55s cubic-bezier(.22,1,.36,1), opacity 0.2s ease, filter 0.45s ease, background 0.35s ease';
-      ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+      ring.style.transform = `translate3d(calc(${cx}px - 50%), calc(${cy}px - 50%), 0)`;
       ring.style.width  = r.width  + 'px';
       ring.style.height = r.height + 'px';
       ring.style.opacity = '0';
@@ -630,7 +640,7 @@ fadeGroups.forEach(group => {
     const cx = r.left + r.width  / 2;
     const cy = r.top  + r.height / 2;
     ring.style.transition = 'none';
-    ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+    ring.style.transform = `translate3d(calc(${cx}px - 50%), calc(${cy}px - 50%), 0)`;
     ring.style.width = r.width + 'px';
     ring.style.height = r.height + 'px';
     ring.style.borderRadius = '999px';
@@ -656,7 +666,7 @@ fadeGroups.forEach(group => {
       const cy = r.top  + r.height / 2;
       locked = true;
       ring.style.transition = 'none';
-      ring.style.transform = `translate(calc(${rx}px - 50%), calc(${ry}px - 50%))`;
+      ring.style.transform = `translate3d(calc(${rx}px - 50%), calc(${ry}px - 50%), 0)`;
       ring.style.background = 'transparent';
       ring.style.boxShadow  = 'none';
       ring.style.filter     = 'none';
@@ -723,7 +733,7 @@ fadeGroups.forEach(group => {
     const cy = r.top  + r.height / 2;
     locked = true;
     ring.style.transition = 'none';
-    ring.style.transform = `translate(calc(${rx}px - 50%), calc(${ry}px - 50%))`;
+    ring.style.transform = `translate3d(calc(${rx}px - 50%), calc(${ry}px - 50%), 0)`;
     ring.style.background = 'transparent';
     ring.style.boxShadow  = 'none';
     ring.style.filter     = 'none';
@@ -734,7 +744,7 @@ fadeGroups.forEach(group => {
         'transform 0.55s cubic-bezier(.22,1,.36,1), ' +
         'width 0.55s cubic-bezier(.22,1,.36,1), height 0.55s cubic-bezier(.22,1,.36,1), ' +
         'border-radius 0.55s cubic-bezier(.22,1,.36,1), opacity 0.15s ease';
-      ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+      ring.style.transform = `translate3d(calc(${cx}px - 50%), calc(${cy}px - 50%), 0)`;
       ring.style.width  = r.width  + 'px';
       ring.style.height = r.height + 'px';
       ring.style.opacity = '0';
@@ -751,7 +761,7 @@ fadeGroups.forEach(group => {
     ring.style.background = '';
     ring.style.boxShadow  = '';
     ring.style.filter     = '';
-    ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+    ring.style.transform = `translate3d(calc(${cx}px - 50%), calc(${cy}px - 50%), 0)`;
     ring.style.width = r.width + 'px';
     ring.style.height = r.height + 'px';
     ring.style.borderRadius = '999px';
@@ -894,7 +904,7 @@ fadeGroups.forEach(group => {
           'width 0.4s cubic-bezier(.22,1,.36,1),' +
           'height 0.4s cubic-bezier(.22,1,.36,1),' +
           'opacity 0.35s ease, filter 0.35s ease';
-        ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+        ring.style.transform = `translate3d(calc(${cx}px - 50%), calc(${cy}px - 50%), 0)`;
         ring.style.width = '20px';
         ring.style.height = '20px';
         ring.style.opacity = '0';
@@ -906,7 +916,7 @@ fadeGroups.forEach(group => {
       ring.classList.remove('sphere-merge');
 
       ring.style.transition = 'none';
-      ring.style.transform = `translate(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%))`;
+      ring.style.transform = `translate3d(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%), 0)`;
       ring.style.width = '20px';
       ring.style.height = '20px';
       ring.style.opacity = '0';
@@ -932,7 +942,7 @@ fadeGroups.forEach(group => {
 // ── Galaxy background ─────────────────────────────
 (() => {
   const canvas = document.getElementById('bg-canvas');
-  const ctx    = canvas.getContext('2d', { willReadFrequently: false });
+  const ctx    = canvas.getContext('2d', { willReadFrequently: false, alpha: true });
   let W, H, mx = -999, my = -999, tmx = 0, tmy = 0;
   let stars = [], meteors = [], dots = [];
   let cols, rows;
@@ -1024,14 +1034,15 @@ fadeGroups.forEach(group => {
 
   function drawGrid() {
     updateGrid();
-    ctx.fillStyle = 'rgb(180,140,255)'; // set once
+    ctx.fillStyle = 'rgb(180,140,255)';
+    // Batch dots by skipping near-zero — avoid beginPath overhead
     for (const d of dots) {
-      d.scale += (d.target - d.scale) * 0.08;
+      d.scale += (d.target - d.scale) * 0.1;
       if (d.scale < 0.03) continue;
       const proximity = (d.target - d.base) / 0.7;
       ctx.globalAlpha = d.scale;
       ctx.beginPath();
-      ctx.arc(d.x, d.y, 1.2 + proximity * 2, 0, Math.PI * 2);
+      ctx.arc(d.x, d.y, 1.2 + proximity * 1.8, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -1132,37 +1143,33 @@ fadeGroups.forEach(group => {
     return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
   }
 
-  window._heroTick = function() {
-    const sy    = window.scrollY;
-    const heroH = hero.offsetHeight;
+  // offsetHeight is cached — only re-read on resize
+  let _heroH = hero.offsetHeight;
+  window.addEventListener('resize', () => { _heroH = hero.offsetHeight; }, { passive: true });
+
+  window._heroTick = function(sy) {
+    if (sy === undefined) sy = window.scrollY;
+    const heroH = _heroH;
     // progress 0→1 over the first 65% of the hero height
     const raw  = Math.min(sy / (heroH * 0.65), 1);
     const ease = easeInOutQuad(raw);
 
-    // ── hello: exits fastest, drifts upward ─────────
+    // ── Use translate3d — compositor-only, no layout ──
     if (heroHello) {
-      heroHello.style.transform = `translateY(${ease * -36}px)`;
+      heroHello.style.transform = `translate3d(0,${ease * -36}px,0)`;
       heroHello.style.opacity   = Math.max(0, 1 - ease * 2.2).toFixed(3);
     }
-
-    // ── memoji: mid speed, drifts up ────────────────
     if (memoji) {
-      memoji.style.transform          = `translateY(${ease * -28}px)`;
+      memoji.style.transform          = `translate3d(0,${ease * -28}px,0)`;
       memoji.style.opacity            = Math.max(0, 1 - ease * 1.6).toFixed(3);
       memoji.style.animationPlayState = raw > 0.04 ? 'paused' : 'running';
     }
-
-    // ── name: slowest, barely moves — last to vanish ─
-    heroName.style.transform = `translateY(${ease * -14}px)`;
+    heroName.style.transform = `translate3d(0,${ease * -14}px,0)`;
     heroName.style.opacity   = Math.max(0, 1 - ease * 1.2).toFixed(3);
-
-    // ── roles: drifts downward (opposite = depth) ───
     if (heroRoles) {
-      heroRoles.style.transform = `translateY(${ease * 22}px)`;
+      heroRoles.style.transform = `translate3d(0,${ease * 22}px,0)`;
       heroRoles.style.opacity   = Math.max(0, 1 - ease * 1.9).toFixed(3);
     }
-
-    // keep glitch layers clean
     glitchR.style.opacity = glitchB.style.opacity = '0';
     glitchMain.style.transform = '';
     glitchMain.style.clipPath  = 'none';
@@ -1228,32 +1235,42 @@ if (_aboutEl) {
   new IntersectionObserver(e => { _aboutVisible = e[0].isIntersecting; }, { threshold: 0 }).observe(_aboutEl);
 }
 
+// Cached scroll value — read once per frame, never in event handlers
+let _cachedScrollY = 0;
+
 (function masterLoop(t) {
   if (!_rafPaused) {
+    // Cache scroll once per frame to avoid forced layout reflow
+    _cachedScrollY = window.scrollY;
+
     if (window._bgTick)     window._bgTick(t);
     if (window._cursorTick) window._cursorTick();
-    // Only run hero-section ticks when hero is visible
     if (_heroVisible) {
-      if (window._memojiTick) window._memojiTick();
+      if (window._memojiTick) window._memojiTick(t);
       if (window._orbitTick)  window._orbitTick();
-      if (window._heroTick)   window._heroTick();
+      if (window._heroTick)   window._heroTick(_cachedScrollY);
     }
-    // Sphere only runs when about section is visible
     if (_aboutVisible && window._sphereTick) window._sphereTick();
-    // Belt always runs (lightweight when idle)
     if (window._beltTick) window._beltTick();
+    if (window._pageNavTick) window._pageNavTick(_cachedScrollY);
+    if (window._siTick) window._siTick(_cachedScrollY);
   }
   requestAnimationFrame(masterLoop);
 })(0);
 
-// ── Memoji galaxy entrance — REMOVED (caused opacity: 0 lock) ──
+// ── Scroll indicator fade — lightweight, driven by RAF ──
 (() => {
   const si = document.getElementById('scroll-indicators');
   if (!si) return;
-  window.addEventListener('scroll', () => {
-    si.style.opacity = window.scrollY > 40 ? '0' : '1';
-    si.style.transition = 'opacity 0.4s ease';
-  }, { passive: true });
+  si.style.transition = 'opacity 0.4s ease';
+  let _siHidden = false;
+  window._siTick = function(sy) {
+    const hidden = sy > 40;
+    if (hidden !== _siHidden) {
+      _siHidden = hidden;
+      si.style.opacity = hidden ? '0' : '1';
+    }
+  };
 })();
 
 // ── AI Chat Widget ────────────────────────────────
@@ -2969,7 +2986,7 @@ console.log("BOTTOM OF SCRIPT");
           'height 0.55s cubic-bezier(.22,1,.36,1), ' +
           'border-radius 0.55s cubic-bezier(.22,1,.36,1), ' +
           'opacity 0.2s ease';
-        ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+        ring.style.transform = `translate3d(calc(${cx}px - 50%), calc(${cy}px - 50%), 0)`;
         ring.style.width  = r.width  + 'px';
         ring.style.height = r.height + 'px';
         ring.style.opacity = '0';
@@ -2983,7 +3000,7 @@ console.log("BOTTOM OF SCRIPT");
       const cx = r.left + r.width  / 2;
       const cy = r.top  + r.height / 2;
       ring.style.transition = 'none';
-      ring.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+      ring.style.transform = `translate3d(calc(${cx}px - 50%), calc(${cy}px - 50%), 0)`;
       ring.style.width = r.width + 'px';
       ring.style.height = r.height + 'px';
       ring.style.borderRadius = '999px';
