@@ -3277,6 +3277,42 @@ if (dpSettings && settingsPanel) {
   // Load state from server on page load
   loadAndApplyState();
 
+  // ── SSE: listen for reload broadcast from admin ──
+  (() => {
+    const es = new EventSource(`${RENDER_URL}/events`);
+    es.addEventListener('reload', () => window.location.reload());
+  })();
+
+  // ── Publish button ──
+  const publishBtn = document.getElementById('settings-publish');
+  if (publishBtn) {
+    publishBtn.addEventListener('click', async () => {
+      publishBtn.classList.add('publishing');
+      publishBtn.querySelector('.settings-publish-label').textContent = 'Publishing...';
+      try {
+        const res = await fetch(`${RENDER_URL}/reload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: ADMIN_PASS })
+        });
+        const data = await res.json();
+        publishBtn.classList.remove('publishing');
+        publishBtn.classList.add('published');
+        publishBtn.querySelector('.settings-publish-label').textContent = `Pushed ✓`;
+        setTimeout(() => {
+          publishBtn.classList.remove('published');
+          publishBtn.querySelector('.settings-publish-label').textContent = 'Publish';
+        }, 2500);
+      } catch(e) {
+        publishBtn.classList.remove('publishing');
+        publishBtn.querySelector('.settings-publish-label').textContent = 'Failed';
+        setTimeout(() => {
+          publishBtn.querySelector('.settings-publish-label').textContent = 'Publish';
+        }, 2000);
+      }
+    });
+  }
+
   if (toggleEmail) {
     toggleEmail.addEventListener('change', () => {
       applyEmailVisibility(toggleEmail.checked);

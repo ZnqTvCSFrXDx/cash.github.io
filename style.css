@@ -4860,7 +4860,9 @@ html {
   pointer-events: none;
   transition: opacity 0.25s ease, transform 0.25s cubic-bezier(.22,1,.36,1);
   max-height: 80vh;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .settings-panel.open {
@@ -4875,6 +4877,51 @@ html {
   justify-content: space-between;
   padding: 14px 16px 10px;
   border-bottom: 1px solid rgba(255,255,255,0.06);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: inherit;
+  flex-shrink: 0;
+}
+
+.settings-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-publish-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, rgba(124,58,237,0.85), rgba(100,40,200,0.9));
+  border: 1px solid rgba(157,95,245,0.35);
+  border-radius: 7px;
+  padding: 4px 10px 4px 7px;
+  cursor: pointer;
+  color: rgba(220,200,255,0.95);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 0 12px rgba(124,58,237,0.25);
+}
+.settings-publish-btn svg { width: 12px; height: 12px; }
+.settings-publish-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(124,58,237,0.45);
+}
+.settings-publish-btn:active { transform: translateY(0); }
+.settings-publish-btn.publishing {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.settings-publish-btn.published {
+  background: linear-gradient(135deg, rgba(34,197,94,0.8), rgba(22,163,74,0.85));
+  border-color: rgba(34,197,94,0.4);
+  box-shadow: 0 0 14px rgba(34,197,94,0.3);
 }
 
 .settings-title {
@@ -4910,6 +4957,8 @@ html {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .settings-section-label {
@@ -5290,18 +5339,19 @@ html {
 /* Pill restricted overlay — smaller variant */
 #contact-email-pill .restricted-overlay {
   gap: 4px;
-  padding-bottom: 2px;
+  padding: 6px 16px;
+  justify-content: center;
+  align-items: center;
 }
 #contact-email-pill .restricted-overlay-icon {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 }
 #contact-email-pill .restricted-overlay-icon svg {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
 }
 #contact-email-pill .restricted-overlay-label {
-  font-size: 7.5px;
-  letter-spacing: 0.16em;
-  margin-top: -1px;
+  font-size: 7px;
+  letter-spacing: 0.14em;
 }

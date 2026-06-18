@@ -4,6 +4,9 @@ const https = require('https');
 const API_KEY = process.env.GROQ_API_KEY;
 const ADMIN_PASS = process.env.ADMIN_PASS || '013301516002';
 
+// ── SSE clients (for live reload broadcast) ──
+const sseClients = new Set();
+
 // ── In-memory admin state (persists while server is awake) ──
 let adminState = {
   showEmail:   true,
@@ -30,6 +33,40 @@ http.createServer((req, res) => {
   // ── Keep-alive ping ──
   if (req.method === 'GET' && req.url === '/ping') {
     res.writeHead(200); res.end('pong'); return;
+  }
+
+  // ── SSE: visitors connect here for live reload ──
+  if (req.method === 'GET' && req.url === '/events') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    });
+    res.write('retry: 3000
+
+');
+    sseClients.add(res);
+    req.on('close', () => sseClients.delete(res));
+    return;
+  }
+
+  // ── Broadcast reload to all visitors (admin only) ──
+  if (req.method === 'POST' && req.url === '/reload') {
+    let body2 = '';
+    req.on('data', d => body2 += d);
+    req.on('end', () => {
+      let p; try { p = JSON.parse(body2); } catch(e) { res.writeHead(400); res.end(); return; }
+      if (p.password !== ADMIN_PASS) { res.writeHead(403); res.end(); return; }
+      sseClients.forEach(client => client.write('event: reload
+data: 1
+
+'));
+      console.log(`Reload broadcast to ${sseClients.size} client(s)`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, clients: sseClients.size }));
+    });
+    return;
   }
 
   // ── Get current state (public) ──
