@@ -2817,7 +2817,7 @@ input.addEventListener('blur', () => {
 
 console.log("BOTTOM OF SCRIPT");
 
-// ── Contact Modal + EmailJS ───────────────────────
+// ── Contact Modal ─────────────────────────────────
 (() => {
   // Copy email on pill click
   const emailPill = document.getElementById('contact-email-pill');
@@ -2844,8 +2844,6 @@ console.log("BOTTOM OF SCRIPT");
       }
     });
   }
-
-  emailjs.init('dPSQYIqp80gXI_eSg');
 
   const overlay   = document.getElementById('contact-modal');
   const openBtn   = document.getElementById('contact-open-btn');
@@ -2876,68 +2874,41 @@ console.log("BOTTOM OF SCRIPT");
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
   submitBtn.addEventListener('click', async () => {
-  const name    = document.getElementById('cf-name').value.trim();
-  const email   = document.getElementById('cf-email').value.trim();
-  const subject = document.getElementById('cf-subject').value.trim();
-  const message = document.getElementById('cf-message').value.trim();
+    const name    = document.getElementById('cf-name').value.trim();
+    const email   = document.getElementById('cf-email').value.trim();
+    const subject = document.getElementById('cf-subject').value.trim();
+    const message = document.getElementById('cf-message').value.trim();
 
-  if (!name || !email || !subject || !message) {
-    statusMsg.textContent = '⚠ Fill in all fields.';
-    statusMsg.className = 'contact-status-msg error';
-    return;
-  }
-
-  submitBtn.disabled = true;
-  submitTxt.textContent = 'SENDING...';
-  statusMsg.textContent = 'Waking up server...';
-  statusMsg.className = 'contact-status-msg';
-
-  // Wake server first (handles cold start)
-  const RENDER = 'https://cash-github-io.onrender.com';
-  const deadline = Date.now() + 30000;
-  while (Date.now() < deadline) {
-    try {
-      const ping = await fetch(`${RENDER}/ping`, { cache: 'no-store' });
-      if (ping.ok) break;
-    } catch(_) {}
-    await new Promise(r => setTimeout(r, 2000));
-  }
-
-  statusMsg.textContent = 'Sending...';
-
-  try {
-    const res = await fetch(`${RENDER}/contact`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, subject, message })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      statusMsg.textContent = '✓ Message sent. I\'ll get back to you soon.';
-      statusMsg.className = 'contact-status-msg success';
-      submitTxt.textContent = 'Send Message';
-      submitBtn.disabled = false;
-      document.getElementById('cf-name').value = '';
-      document.getElementById('cf-email').value = '';
-      document.getElementById('cf-subject').value = '';
-      document.getElementById('cf-message').value = '';
-    } else {
-      throw new Error(data.error);
+    if (!name || !email || !subject || !message) {
+      statusMsg.textContent = '⚠ Fill in all fields.';
+      statusMsg.className = 'contact-status-msg error';
+      return;
     }
-  } catch(e) {
-    console.error('Contact error:', e.message);
-    statusMsg.textContent = '✕ Failed to send. Try emailing directly.';
-    statusMsg.className = 'contact-status-msg error';
-    submitTxt.textContent = 'Send Message';
-    submitBtn.disabled = false;
-  }
-});
 
-    fetch('https://cash-github-io.onrender.com/contact', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, subject, message })
-    }).then(r => r.json()).then(data => {
+    submitBtn.disabled = true;
+    submitTxt.textContent = 'SENDING...';
+    statusMsg.textContent = 'Waking up server...';
+    statusMsg.className = 'contact-status-msg';
+
+    const RENDER = 'https://cash-github-io.onrender.com';
+    const deadline = Date.now() + 30000;
+    while (Date.now() < deadline) {
+      try {
+        const ping = await fetch(`${RENDER}/ping`, { cache: 'no-store' });
+        if (ping.ok) break;
+      } catch(_) {}
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    statusMsg.textContent = 'Sending...';
+
+    try {
+      const res = await fetch(`${RENDER}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message })
+      });
+      const data = await res.json();
       if (data.ok) {
         statusMsg.textContent = '✓ Message sent. I\'ll get back to you soon.';
         statusMsg.className = 'contact-status-msg success';
@@ -2950,15 +2921,16 @@ console.log("BOTTOM OF SCRIPT");
       } else {
         throw new Error(data.error);
       }
-    }).catch(() => {
+    } catch(e) {
+      console.error('Contact error:', e.message);
       statusMsg.textContent = '✕ Failed to send. Try emailing directly.';
       statusMsg.className = 'contact-status-msg error';
       submitTxt.textContent = 'Send Message';
       submitBtn.disabled = false;
-    });
-      });
-    })();
-
+    }
+  });
+})();
+    
     // ── Scroll Reveal: fade + scale, staggered ────────
 (function () {
   const els = document.querySelectorAll('.reveal');
