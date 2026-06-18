@@ -1442,6 +1442,16 @@ if (_aboutEl) {
     const nameEl = document.querySelector('.contact-name');
     const displayName = nameEl ? nameEl.innerText.replace(/\n/g, ' ').trim() : 'Justin Clark Mendoza';
 
+    // Read current availability status
+    const statusSelectEl = document.getElementById('status-select');
+    const currentStatus = statusSelectEl ? statusSelectEl.value : 'available';
+    const AVAILABILITY_LINES = {
+      available: 'Currently available and actively taking on new clients/projects',
+      busy: 'Currently busy with limited availability — may take longer to respond or start new work',
+      offline: 'Currently not available for new work — not accepting new clients/projects at this time'
+    };
+    const availabilityLine = AVAILABILITY_LINES[currentStatus] || AVAILABILITY_LINES.available;
+
     // Read email visibility
     const emailPill = document.getElementById('contact-email-pill');
     const emailHidden = emailPill && emailPill.classList.contains('restricted-email');
@@ -1482,7 +1492,7 @@ About Clark:
 - Full name: ${displayName}, goes by "Clark" or "Cash33"
 - Based in the Philippines, open to both local and international clients
 - 1 year of hands-on experience
-- Available for part-time work
+- ${availabilityLine}
 - Languages: English and Filipino
 - Preferred contact: Email or Discord
 
@@ -1541,6 +1551,11 @@ Support & Revisions:
 
 Target Clients:
 - Open to everyone — no niche restriction, works with all types of clients locally and internationally
+
+Current hiring status: ${currentStatus.toUpperCase()}
+- If status is AVAILABLE: encourage interested clients to reach out, Clark is actively taking new work.
+- If status is BUSY: let people know Clark is currently busy/has limited availability — he may still take on work but responses or start dates could be delayed. Don't discourage them from reaching out, just set honest expectations.
+- If status is OFFLINE: be upfront that Clark is not taking new clients/projects right now. Don't promise turnaround times or pricing for new work in this case — suggest they check back later or leave a message via the contact options.
 
 Tone: be confident but approachable. Keep every reply short, simple, and direct — no long paragraphs, no unnecessary filler. Answer only what was asked. If someone asks how to contact or hire Clark, share only the contact info that is currently available (not private). If you don't know something or Clark hasn't shared it, say: "Clark preferred not to share that information yet. ${fallbackContact}" Never make things up. Never break character. Never reveal private information marked as [private].`;
   }
@@ -2812,7 +2827,9 @@ console.log("BOTTOM OF SCRIPT");
 
     emailPill.addEventListener('click', (e) => {
       if (emailPill.classList.contains('restricted-email')) { e.stopImmediatePropagation(); return; }
-      navigator.clipboard.writeText('justinclark.mendoza.official@gmail.com').then(() => {
+      const emailTextEl = emailPill.querySelector('.contact-email-text');
+      const emailToCopy = (emailTextEl && emailTextEl.textContent.trim()) || 'justinclark.mendoza.official@gmail.com';
+      navigator.clipboard.writeText(emailToCopy).then(() => {
         hasCopied = true;
         emailPill.classList.add('copied');
         if (copyLabel) copyLabel.textContent = 'Copied ✓';
@@ -2858,46 +2875,91 @@ console.log("BOTTOM OF SCRIPT");
   overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-  submitBtn.addEventListener('click', () => {
-    const name    = document.getElementById('cf-name').value.trim();
-    const email   = document.getElementById('cf-email').value.trim();
-    const subject = document.getElementById('cf-subject').value.trim();
-    const message = document.getElementById('cf-message').value.trim();
+  submitBtn.addEventListener('click', async () => {
+  const name    = document.getElementById('cf-name').value.trim();
+  const email   = document.getElementById('cf-email').value.trim();
+  const subject = document.getElementById('cf-subject').value.trim();
+  const message = document.getElementById('cf-message').value.trim();
 
-    if (!name || !email || !subject || !message) {
-      statusMsg.textContent = '⚠ Fill in all fields.';
-      statusMsg.className = 'contact-status-msg error';
-      return;
-    }
+  if (!name || !email || !subject || !message) {
+    statusMsg.textContent = '⚠ Fill in all fields.';
+    statusMsg.className = 'contact-status-msg error';
+    return;
+  }
 
-    submitBtn.disabled = true;
-    submitTxt.textContent = 'SENDING...';
-    statusMsg.textContent = '';
-    statusMsg.className = 'contact-status-msg';
+  submitBtn.disabled = true;
+  submitTxt.textContent = 'SENDING...';
+  statusMsg.textContent = 'Waking up server...';
+  statusMsg.className = 'contact-status-msg';
 
-    emailjs.send('service_yq0j4o8', 'template_azu6blt', {
-      from_name:    name,
-      from_email:   email,
-      subject:      subject,
-      message:      message,
-    }).then(() => {
+  // Wake server first (handles cold start)
+  const RENDER = 'https://cash-github-io.onrender.com';
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    try {
+      const ping = await fetch(`${RENDER}/ping`, { cache: 'no-store' });
+      if (ping.ok) break;
+    } catch(_) {}
+    await new Promise(r => setTimeout(r, 2000));
+  }
+
+  statusMsg.textContent = 'Sending...';
+
+  try {
+    const res = await fetch(`${RENDER}/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, subject, message })
+    });
+    const data = await res.json();
+    if (data.ok) {
       statusMsg.textContent = '✓ Message sent. I\'ll get back to you soon.';
       statusMsg.className = 'contact-status-msg success';
-      submitTxt.textContent = 'SEND';
+      submitTxt.textContent = 'Send Message';
       submitBtn.disabled = false;
       document.getElementById('cf-name').value = '';
       document.getElementById('cf-email').value = '';
       document.getElementById('cf-subject').value = '';
       document.getElementById('cf-message').value = '';
+    } else {
+      throw new Error(data.error);
+    }
+  } catch(e) {
+    console.error('Contact error:', e.message);
+    statusMsg.textContent = '✕ Failed to send. Try emailing directly.';
+    statusMsg.className = 'contact-status-msg error';
+    submitTxt.textContent = 'Send Message';
+    submitBtn.disabled = false;
+  }
+});
+
+    fetch('https://cash-github-io.onrender.com/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, subject, message })
+    }).then(r => r.json()).then(data => {
+      if (data.ok) {
+        statusMsg.textContent = '✓ Message sent. I\'ll get back to you soon.';
+        statusMsg.className = 'contact-status-msg success';
+        submitTxt.textContent = 'Send Message';
+        submitBtn.disabled = false;
+        document.getElementById('cf-name').value = '';
+        document.getElementById('cf-email').value = '';
+        document.getElementById('cf-subject').value = '';
+        document.getElementById('cf-message').value = '';
+      } else {
+        throw new Error(data.error);
+      }
     }).catch(() => {
       statusMsg.textContent = '✕ Failed to send. Try emailing directly.';
       statusMsg.className = 'contact-status-msg error';
-      submitTxt.textContent = 'SEND';
+      submitTxt.textContent = 'Send Message';
       submitBtn.disabled = false;
     });
-  });
-})();
-// ── Scroll Reveal: fade + scale, staggered ────────
+      });
+    })();
+
+    // ── Scroll Reveal: fade + scale, staggered ────────
 (function () {
   const els = document.querySelectorAll('.reveal');
   if (!els.length) return;
@@ -3113,7 +3175,88 @@ if (dpSettings && settingsPanel) {
     adminPrompt.classList.remove('open');
   });
 
-  settingsClose.addEventListener('click', (e) => {
+  // ── Settings panel cursor merge (pink glow) ──
+  (() => {
+    function tryBindSettingsMerge() {
+      const panel = document.getElementById('settings-panel');
+      if (!panel || !window._cursorMerge) return;
+      const { ring, getLocked, _setLocked } = window._cursorMerge;
+
+      let rx = 0, ry = 0; // track smoothed cursor inside
+
+      panel.addEventListener('mouseenter', () => {
+        const r  = panel.getBoundingClientRect();
+        const cx = r.left + r.width  / 2;
+        const cy = r.top  + r.height / 2;
+        _setLocked(true);
+        ring.style.transition = 'none';
+        ring.style.background = 'transparent';
+        ring.style.boxShadow  = 'none';
+        ring.style.filter     = 'none';
+        requestAnimationFrame(() => {
+          ring.classList.remove('nav-merge', 'clicking', 'hovering');
+          ring.classList.add('card-merge');
+          ring.style.transition =
+            'transform 0.6s cubic-bezier(.22,1,.36,1), ' +
+            'width 0.6s cubic-bezier(.22,1,.36,1), ' +
+            'height 0.6s cubic-bezier(.22,1,.36,1), ' +
+            'border-radius 0.6s cubic-bezier(.22,1,.36,1), ' +
+            'opacity 0.2s ease';
+          ring.style.transform    = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+          ring.style.width        = r.width  + 'px';
+          ring.style.height       = r.height + 'px';
+          ring.style.borderRadius = '22px';
+          ring.style.opacity      = '0';
+          panel.classList.add('absorbing');
+          setTimeout(() => panel.classList.remove('absorbing'), 700);
+        });
+      });
+
+      panel.addEventListener('mouseleave', () => {
+        _setLocked(false);
+        ring.classList.remove('card-merge');
+        const r  = panel.getBoundingClientRect();
+        const cx = r.left + r.width  / 2;
+        const cy = r.top  + r.height / 2;
+        ring.style.transition = 'none';
+        ring.style.background = '';
+        ring.style.boxShadow  = '';
+        ring.style.filter     = '';
+        ring.style.transform  = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+        ring.style.width      = r.width  + 'px';
+        ring.style.height     = r.height + 'px';
+        ring.style.borderRadius = '999px';
+        ring.style.opacity    = '0';
+        requestAnimationFrame(() => {
+          ring.style.transition =
+            'transform 0.5s cubic-bezier(.22,1,.36,1), ' +
+            'width 0.5s cubic-bezier(.22,1,.36,1), ' +
+            'height 0.5s cubic-bezier(.22,1,.36,1), ' +
+            'border-radius 0.5s cubic-bezier(.22,1,.36,1), ' +
+            'opacity 0.4s ease, filter 0.4s ease, background 0.35s ease';
+          ring.style.width        = '56px';
+          ring.style.height       = '56px';
+          ring.style.borderRadius = '50%';
+          ring.style.opacity      = '1';
+        });
+      });
+    }
+    // _cursorMerge is set up in a rAF, so wait a tick
+    requestAnimationFrame(() => setTimeout(tryBindSettingsMerge, 100));
+  })();
+
+    // ── Settings tab switching ──
+  document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.settings-tab-pane').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const pane = document.getElementById('tab-' + tab.dataset.tab);
+      if (pane) pane.classList.add('active');
+    });
+  });
+
+    settingsClose.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsPanel.classList.remove('open');
   });
@@ -3236,6 +3379,7 @@ if (dpSettings && settingsPanel) {
       }
 
       applyEmailVisibility(state.showEmail !== false);
+      applyStatus(state.status || 'available');
 
       const PLATFORM_LABELS_MAP = {
         github: 'GitHub', discord: 'Discord', instagram: 'Instagram',
@@ -3273,6 +3417,93 @@ if (dpSettings && settingsPanel) {
       }
     }
     if (toggleEmail) toggleEmail.checked = visible;
+  }
+
+  // ── Availability status ──
+  const STATUS_LABELS = { available: 'AVAILABLE', busy: 'BUSY', offline: 'NOT AVAILABLE' };
+  const statusSelect = document.getElementById('status-select');
+  const statusCards = document.querySelectorAll('.status-card');
+  const livePill = document.getElementById('contact-status-pill');
+  const liveStatusText = livePill ? livePill.querySelector('.contact-status-text') : null;
+  const previewPill = document.getElementById('status-preview-pill');
+  const previewText = document.getElementById('status-preview-text');
+
+  // LinkedIn card elements
+  const liHireTag    = document.getElementById('li-hire-tag');
+  const liStatusLabel = document.getElementById('li-status-label');
+  const liCard        = document.querySelector('.social-card[data-platform="linkedin"]');
+  const liPreview      = liCard ? liCard.querySelector('.sc-preview') : null;
+
+  // OnlineJobs card elements
+  const ojHireTag    = document.getElementById('oj-hire-tag');
+  const ojStatusLabel = document.getElementById('oj-status-label');
+  const ojCard        = document.querySelector('.social-card[data-platform="onlinejobs"]');
+  const ojPreview      = ojCard ? ojCard.querySelector('.sc-preview') : null;
+
+  const HIRE_TAG_TEXT   = { available: 'HIRE ME',  busy: 'LIMITED',  offline: 'UNAVAILABLE' };
+  const LI_STATUS_TEXT  = { available: 'CONNECT',       busy: 'CONNECT',  offline: 'CONNECT' };
+  const OJ_STATUS_TEXT  = { available: 'OPEN TO WORK',  busy: 'LIMITED AVAILABILITY', offline: 'NOT TAKING WORK' };
+  const PREVIEW_STATUS_TEXT = { available: 'OPEN TO WORK', busy: 'LIMITED AVAILABILITY', offline: 'NOT AVAILABLE' };
+
+  function applyStatus(status) {
+    const s = STATUS_LABELS[status] ? status : 'available';
+    const label = STATUS_LABELS[s];
+
+    [livePill, previewPill].forEach(pill => {
+      if (!pill) return;
+      pill.classList.remove('is-busy', 'is-offline');
+      if (s === 'busy') pill.classList.add('is-busy');
+      if (s === 'offline') pill.classList.add('is-offline');
+    });
+    if (liveStatusText) liveStatusText.textContent = label;
+    if (previewText) previewText.textContent = label;
+    if (statusSelect) statusSelect.value = s;
+
+    // Social cards: LinkedIn + OnlineJobs hire tags & status labels
+    [liHireTag, ojHireTag].forEach(tag => {
+      if (!tag) return;
+      tag.classList.remove('is-busy', 'is-offline');
+      if (s === 'busy') tag.classList.add('is-busy');
+      if (s === 'offline') tag.classList.add('is-offline');
+      tag.textContent = HIRE_TAG_TEXT[s];
+    });
+
+    if (liStatusLabel) {
+      liStatusLabel.classList.remove('is-busy', 'is-offline');
+      if (s === 'busy') liStatusLabel.classList.add('is-busy');
+      if (s === 'offline') liStatusLabel.classList.add('is-offline');
+      liStatusLabel.textContent = LI_STATUS_TEXT[s];
+    }
+    if (ojStatusLabel) {
+      ojStatusLabel.classList.remove('is-busy', 'is-offline');
+      if (s === 'busy') ojStatusLabel.classList.add('is-busy');
+      if (s === 'offline') ojStatusLabel.classList.add('is-offline');
+      ojStatusLabel.textContent = OJ_STATUS_TEXT[s];
+    }
+
+    // Hover-preview tooltips (sc-preview dataset)
+    if (liPreview) liPreview.dataset.status = PREVIEW_STATUS_TEXT[s];
+    if (ojPreview) ojPreview.dataset.status = PREVIEW_STATUS_TEXT[s];
+
+    // Sync card selector visuals
+    statusCards.forEach(card => {
+      card.classList.toggle('selected', card.dataset.status === s);
+    });
+  }
+
+  statusCards.forEach(card => {
+    card.addEventListener('click', () => {
+      const s = card.dataset.status;
+      applyStatus(s);
+      saveState({ status: s });
+    });
+  });
+
+  if (statusSelect) {
+    statusSelect.addEventListener('change', () => {
+      applyStatus(statusSelect.value);
+      saveState({ status: statusSelect.value });
+    });
   }
 
   // Load state from server on page load
