@@ -7,7 +7,7 @@ http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-  if (req.url !== '/' && req.url !== '') { res.writeHead(404); res.end(); return; }
+  if (req.method === 'GET') { res.writeHead(200); res.end('OK'); return; }
 
   let body = '';
   req.on('data', d => body += d);
@@ -50,4 +50,4 @@ http.createServer((req, res) => {
     proxy.write(payload);
     proxy.end();
   });
-}).listen(3001, () => console.log('Proxy running on http://localhost:3001'));
+}).listen(process.env.PORT || 3001, () => console.log('Proxy running'));
