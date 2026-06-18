@@ -2,9 +2,18 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const nodemailer = require('nodemailer');
 
 const API_KEY   = process.env.GROQ_API_KEY;
 const ADMIN_PASS = process.env.ADMIN_PASS || '013301516002';
+
+const mailer = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  }
+});
 
 // ── Persistent state via JSON file ──
 const STATE_FILE = path.join(__dirname, 'admin_state.json');
@@ -12,6 +21,7 @@ const STATE_FILE = path.join(__dirname, 'admin_state.json');
 const DEFAULT_STATE = {
   showEmail:   true,
   displayName: '',
+  status:      'available',
   socials: {
     github:     true,
     discord:    true,
@@ -90,7 +100,8 @@ http.createServer((req, res) => {
   // ── All POSTs: read body first ──
   let body = '';
   req.on('data', d => body += d);
-  req.on('end', () => {
+  req.on('end', async () => {
+    console.log('POST', req.url, body);
     let parsed;
     try { parsed = body ? JSON.parse(body) : {}; }
     catch(e) { res.writeHead(400); res.end('Bad JSON'); return; }
@@ -125,6 +136,29 @@ http.createServer((req, res) => {
       console.log('State updated + persisted:', adminState);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true })); return;
+    }
+
+    // ── POST /contact ──
+    if (req.url === '/contact') {
+      const { name, email, subject, message } = parsed;
+      if (!name || !email || !subject || !message) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Missing fields' })); return;
+      }
+      try {
+        await mailer.sendMail({
+          from: `"${name}" <${process.env.GMAIL_USER}>`,
+          to: process.env.GMAIL_USER,
+          replyTo: email,
+          subject: `[Portfolio] ${subject}`,
+          text: `From: ${name} <${email}>\n\n${message}`,
+        });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true })); return;
+      } catch(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message })); return;
+      }
     }
 
     // ── POST / (AI chat proxy) ──
