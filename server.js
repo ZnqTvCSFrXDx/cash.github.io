@@ -13,7 +13,9 @@ http.createServer((req, res) => {
   req.on('data', d => body += d);
   req.on('end', () => {
     console.log('Body received:', body);
-    const parsed = JSON.parse(body);
+    if (!body || !body.trim()) { res.writeHead(200); res.end('OK'); return; }
+    let parsed;
+    try { parsed = JSON.parse(body); } catch(e) { res.writeHead(400); res.end('Bad JSON'); return; }
     const payload = JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       messages: [
