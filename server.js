@@ -100,6 +100,12 @@ data: ' + JSON.stringify({ from: senderId }) + '
     }
 
     // ── AI chat proxy ──
+    if (!parsed.messages || !Array.isArray(parsed.messages)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unknown route or missing messages' }));
+      return;
+    }
+
     const payload = JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       messages: [
