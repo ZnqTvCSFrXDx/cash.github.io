@@ -1,14 +1,15 @@
 const http = require('http');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
-const API_KEY = process.env.GROQ_API_KEY;
+const API_KEY   = process.env.GROQ_API_KEY;
 const ADMIN_PASS = process.env.ADMIN_PASS || '013301516002';
 
-// ── SSE clients (for live reload broadcast) ──
-const sseClients = new Set();
+// ── Persistent state via JSON file ──
+const STATE_FILE = path.join(__dirname, 'admin_state.json');
 
-// ── In-memory admin state (persists while server is awake) ──
-let adminState = {
+const DEFAULT_STATE = {
   showEmail:   true,
   displayName: '',
   socials: {
@@ -20,6 +21,34 @@ let adminState = {
   }
 };
 
+function loadState() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const raw = fs.readFileSync(STATE_FILE, 'utf8');
+      const saved = JSON.parse(raw);
+      // Deep merge with defaults so new keys are always present
+      return {
+        ...DEFAULT_STATE,
+        ...saved,
+        socials: { ...DEFAULT_STATE.socials, ...(saved.socials || {}) }
+      };
+    }
+  } catch(e) { console.warn('Failed to load state file:', e.message); }
+  return { ...DEFAULT_STATE, socials: { ...DEFAULT_STATE.socials } };
+}
+
+function persistState(state) {
+  try {
+    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+  } catch(e) { console.warn('Failed to persist state:', e.message); }
+}
+
+let adminState = loadState();
+console.log('State loaded:', adminState);
+
+// ── SSE clients ──
+const sseClients = new Set();
+
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -30,47 +59,26 @@ http.createServer((req, res) => {
   setCors(res);
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  // ── Keep-alive ping ──
+  // ── Ping ──
   if (req.method === 'GET' && req.url === '/ping') {
     res.writeHead(200); res.end('pong'); return;
   }
 
-  // ── SSE: visitors connect here for live reload ──
+  // ── SSE ──
   if (req.method === 'GET' && req.url === '/events') {
     res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
+      'Content-Type':  'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      'Connection':    'keep-alive',
       'Access-Control-Allow-Origin': '*',
     });
-    res.write('retry: 3000
-
-');
+    res.write('retry: 3000\n\n');
     sseClients.add(res);
     req.on('close', () => sseClients.delete(res));
     return;
   }
 
-  // ── Broadcast reload to all visitors (admin only) ──
-  if (req.method === 'POST' && req.url === '/reload') {
-    let body2 = '';
-    req.on('data', d => body2 += d);
-    req.on('end', () => {
-      let p; try { p = JSON.parse(body2); } catch(e) { res.writeHead(400); res.end(); return; }
-      if (p.password !== ADMIN_PASS) { res.writeHead(403); res.end(); return; }
-      const senderId = p.sessionId || '';
-      sseClients.forEach(client => client.write('event: reload
-data: ' + JSON.stringify({ from: senderId }) + '
-
-'));
-      console.log(`Reload broadcast to ${sseClients.size} client(s)`);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, clients: sseClients.size }));
-    });
-    return;
-  }
-
-  // ── Get current state (public) ──
+  // ── GET state ──
   if (req.method === 'GET' && req.url === '/state') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(adminState)); return;
@@ -79,37 +87,56 @@ data: ' + JSON.stringify({ from: senderId }) + '
   // ── Fallback GET ──
   if (req.method === 'GET') { res.writeHead(200); res.end('OK'); return; }
 
-  // ── All POST routes ──
+  // ── All POSTs: read body first ──
   let body = '';
   req.on('data', d => body += d);
   req.on('end', () => {
-    if (!body || !body.trim()) { res.writeHead(200); res.end('OK'); return; }
     let parsed;
-    try { parsed = JSON.parse(body); } catch(e) { res.writeHead(400); res.end('Bad JSON'); return; }
+    try { parsed = body ? JSON.parse(body) : {}; }
+    catch(e) { res.writeHead(400); res.end('Bad JSON'); return; }
 
-    // ── Save admin state ──
+    // ── POST /reload — broadcast SSE reload ──
+    if (req.url === '/reload') {
+      if (parsed.password !== ADMIN_PASS) { res.writeHead(403); res.end(); return; }
+      const senderId = parsed.sessionId || '';
+      sseClients.forEach(client =>
+        client.write(`event: reload\ndata: ${JSON.stringify({ from: senderId })}\n\n`)
+      );
+      console.log(`Reload broadcast to ${sseClients.size} client(s)`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, clients: sseClients.size }));
+      return;
+    }
+
+    // ── POST /state — save admin state ──
     if (req.url === '/state') {
       if (parsed.password !== ADMIN_PASS) {
         res.writeHead(403, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Unauthorized' })); return;
       }
-      adminState = { ...adminState, ...parsed.state };
-      console.log('Admin state updated:', adminState);
+      const patch = parsed.state || {};
+      // Deep merge: handle socials nested object properly
+      adminState = {
+        ...adminState,
+        ...patch,
+        socials: { ...adminState.socials, ...(patch.socials || {}) }
+      };
+      persistState(adminState);
+      console.log('State updated + persisted:', adminState);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true })); return;
     }
 
-    // ── AI chat proxy ──
+    // ── POST / (AI chat proxy) ──
     if (!parsed.messages || !Array.isArray(parsed.messages)) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unknown route or missing messages' }));
-      return;
+      res.end(JSON.stringify({ error: 'Unknown route or missing messages' })); return;
     }
 
     const payload = JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       messages: [
-        { role: 'system', content: parsed.system },
+        { role: 'system', content: parsed.system || '' },
         ...parsed.messages
       ]
     });
@@ -119,8 +146,8 @@ data: ' + JSON.stringify({ from: senderId }) + '
       path: '/openai/v1/chat/completions',
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
+        'Content-Type':   'application/json',
+        'Authorization':  `Bearer ${API_KEY}`,
         'Content-Length': Buffer.byteLength(payload)
       }
     };
@@ -129,10 +156,14 @@ data: ' + JSON.stringify({ from: senderId }) + '
       let data = '';
       r.on('data', d => data += d);
       r.on('end', () => {
-        const json = JSON.parse(data);
-        const reply = json.choices?.[0]?.message?.content || 'No response.';
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ content: [{ text: reply }] }));
+        try {
+          const json = JSON.parse(data);
+          const reply = json.choices?.[0]?.message?.content || 'No response.';
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ content: [{ text: reply }] }));
+        } catch(e) {
+          res.writeHead(500); res.end(JSON.stringify({ error: 'Parse error' }));
+        }
       });
     });
     proxy.on('error', err => {
@@ -141,4 +172,5 @@ data: ' + JSON.stringify({ from: senderId }) + '
     proxy.write(payload);
     proxy.end();
   });
+
 }).listen(process.env.PORT || 3001, () => console.log('Proxy running'));

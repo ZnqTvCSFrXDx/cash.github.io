@@ -3210,12 +3210,13 @@ if (dpSettings && settingsPanel) {
   // Save state to Render
   async function saveState(patch) {
     try {
-      await fetch(`${RENDER_URL}/state`, {
+      const r = await fetch(`${RENDER_URL}/state`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: ADMIN_PASS, state: patch })
       });
-    } catch(e) { console.warn('State save failed:', e); }
+      if (!r.ok) console.error('saveState bad status:', r.status);
+    } catch(e) { console.error('saveState fetch failed:', e); }
   }
 
   // Load state from Render and apply to UI
@@ -3254,7 +3255,7 @@ if (dpSettings && settingsPanel) {
           existing.remove();
         }
       });
-    } catch(e) { console.warn('State load failed:', e); }
+    } catch(e) { console.error('loadAndApplyState failed:', e); }
   }
 
   function applyEmailVisibility(visible) {
