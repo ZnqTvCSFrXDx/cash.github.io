@@ -4103,6 +4103,16 @@ nav.absorbing::after {
   #hero {
     padding: 0 80px;
   }
+  /* ── Fix: hero name too large on 1440p / MacBook screens ── */
+  .hero-name {
+    font-size: clamp(120px, 14vw, 200px);
+  }
+  .memoji svg {
+    width: clamp(240px, 26vw, 380px);
+  }
+  .contact-name {
+    font-size: clamp(44px, 5.5vw, 72px);
+  }
   .sphere-wrap {
     max-width: 460px;
   }
@@ -4120,6 +4130,10 @@ nav.absorbing::after {
   #hero {
     padding: 0 clamp(40px, 5vw, 72px);
     gap: 0;
+  }
+  /* ── Fix: hero-name parent must also be capped ── */
+  .hero-name {
+    font-size: clamp(80px, 9vw, 120px);
   }
   .hero-name .glitch-main {
     font-size: clamp(56px, 7vw, 80px);
