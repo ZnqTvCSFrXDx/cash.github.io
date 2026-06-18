@@ -39,6 +39,7 @@ http.createServer((req, res) => {
       r.on('end', () => {
       console.log('Groq raw response:', data);
         const json = JSON.parse(data);
+        console.log('Groq parsed:', JSON.stringify(json, null, 2));
         const reply = json.choices?.[0]?.message?.content || 'No response.';
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ content: [{ text: reply }] }));

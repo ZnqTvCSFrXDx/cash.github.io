@@ -2562,7 +2562,7 @@ nav.absorbing::after {
   padding: 10px 16px;
   pointer-events: none;
   box-shadow: 0 4px 28px rgba(0,0,0,0.5), 0 0 20px rgba(124,58,237,0.12);
-  animation: floatLabelPulse 3s ease-in-out infinite;
+  animation: floatBoxBlink 6s ease-in-out infinite;
   white-space: nowrap;
 }
 
@@ -2621,6 +2621,14 @@ nav.absorbing::after {
 @keyframes floatLabelPulse {
   0%, 100% { opacity: 0.85; transform: translateY(0px); }
   50%       { opacity: 1;    transform: translateY(-4px); }
+}
+
+@keyframes floatBoxBlink {
+  0%   { opacity: 0; transform: translateY(6px); }
+  15%  { opacity: 1; transform: translateY(0px); }
+  70%  { opacity: 1; transform: translateY(0px); }
+  85%  { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 0; transform: translateY(6px); }
 }
 
 /* Hide label when chat is open */
