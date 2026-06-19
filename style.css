@@ -3046,9 +3046,9 @@ nav.absorbing::after {
   --belt-scale: 1;
   position: relative;
   width: 100%;
-  height: calc(840px * var(--belt-scale));
-  margin-top: 40px;
-  margin-bottom: 40px;
+  height: calc(700px * var(--belt-scale));
+  margin-top: 16px;
+  margin-bottom: 0px;
   overflow-x: clip;
   overflow-y: visible;
 }
@@ -3073,7 +3073,7 @@ nav.absorbing::after {
 
 .belt-scene {
   width: 100%;
-  height: calc(840px * var(--belt-scale));
+  height: calc(700px * var(--belt-scale));
   position: relative;
 }
 
@@ -3528,7 +3528,7 @@ nav.absorbing::after {
   position: absolute;
   left: 0;
   right: 0;
-  top: 590px;
+  top: calc(570px * var(--belt-scale, 1));
   display: flex;
   justify-content: center;
   margin-top: 0;
@@ -3580,7 +3580,7 @@ nav.absorbing::after {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(655px * var(--belt-scale));
+  top: calc(640px * var(--belt-scale, 1));
   text-align: center;
   font-size: 10px;
   letter-spacing: 0.2em;
@@ -4090,7 +4090,7 @@ nav.absorbing::after {
     font-size: clamp(60px, 8vw, 100px);
   }
   .belt-wrap {
-    --belt-scale: 1.15;
+    --belt-scale: 1.08;
   }
 }
 
@@ -4140,7 +4140,7 @@ nav.absorbing::after {
     margin-bottom: 18px;
   }
   .belt-wrap {
-    --belt-scale: 0.70;
+    --belt-scale: 0.82;
   }
 
   #socials.section {
@@ -4160,7 +4160,7 @@ nav.absorbing::after {
 
 @media (min-width: 900px) and (max-height: 800px) {
   .belt-wrap {
-    --belt-scale: 0.62;
+    --belt-scale: 0.72;
   }
   .social-card {
     padding: 9px 20px;
@@ -4233,7 +4233,7 @@ nav.absorbing::after {
     margin-bottom: 24px;
   }
   .belt-wrap {
-    --belt-scale: 0.78;
+    --belt-scale: 0.88;
   }
   /* ── Socials ── */
   #socials.section {
@@ -4295,7 +4295,7 @@ nav.absorbing::after {
 /* ── Tablet (600px – 899px) ──────────────────────── */
 @media (min-width: 600px) and (max-width: 899px) {
   .belt-wrap {
-    --belt-scale: 0.88;
+    --belt-scale: 0.82;
   }
   nav {
     padding: 0 16px;
@@ -4402,7 +4402,7 @@ nav.absorbing::after {
 /* ── Phone (up to 599px) ─────────────────────────── */
 @media (max-width: 599px) {
   .belt-wrap {
-    --belt-scale: 0.66;
+    --belt-scale: 0.62;
   }
   nav {
     top: 12px;
