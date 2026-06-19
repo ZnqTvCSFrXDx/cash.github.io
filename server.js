@@ -177,7 +177,14 @@ function handlePing(req, res) {
 
 // GET /events — opens an SSE stream; client stays subscribed until
 // it disconnects.
+const MAX_SSE_CLIENTS = 50; // plenty for real visitors, blocks abuse
+
 function handleSSE(req, res) {
+  if (sseClients.size >= MAX_SSE_CLIENTS) {
+    res.writeHead(503, { 'Content-Type': 'text/plain' });
+    res.end('Too many open connections, try again later');
+    return;
+  }
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',

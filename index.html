@@ -8,7 +8,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <!-- SECURITY: Content-Security-Policy — restricts where scripts, styles,
+       fonts, images, and network requests can come from. Even if an XSS
+       bug ever slips in, the browser will refuse to run injected scripts
+       or talk to unapproved domains. Update this if you add new external
+       resources (fonts, CDNs, APIs) — they'll be silently blocked otherwise. -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self';
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src https://fonts.gstatic.com;
+    img-src 'self' data: https://cdn.jsdelivr.net;
+    connect-src 'self' https://cash-github-io.onrender.com https://formspree.io;
+    object-src 'none';
+    base-uri 'self';
+  ">
 </head>
 <body>
   <!-- ── Loading Screen ─────────────────────────── -->
