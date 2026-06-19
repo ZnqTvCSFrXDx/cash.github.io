@@ -3147,7 +3147,13 @@ if (dpSettings && settingsPanel) {
         adminPassword.value = '';
         return;
       }
-      if (!r.ok) throw new Error('bad creds');
+      if (r.status === 403) {
+        adminError.textContent = 'Incorrect password.';
+        adminPassword.value = '';
+        adminPassword.focus();
+        return;
+      }
+      if (!r.ok) throw new Error(`Server returned ${r.status}`);
       const data = await r.json();
       adminToken = data.token;
       sessionStorage.setItem('cash33-admin-token', adminToken);
@@ -3155,7 +3161,8 @@ if (dpSettings && settingsPanel) {
       adminPrompt.classList.remove('open');
       setTimeout(() => settingsPanel.classList.add('open'), 280);
     } catch (e) {
-      adminError.textContent = 'Incorrect password.';
+      console.error('Login request failed:', e);
+      adminError.textContent = 'Could not reach server — check console for details.';
       adminPassword.value = '';
       adminPassword.focus();
     } finally {
