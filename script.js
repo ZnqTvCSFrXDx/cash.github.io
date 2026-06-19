@@ -2005,6 +2005,13 @@ window.addEventListener('mousemove', e => {
     for (let i=0; i<points.length; i++) _sorted.push(points[i]);
     _sorted.sort((a,b)=>a.z-b.z);
     const cx=W/2, cy=H/2;
+
+    // Clip icons + labels to the canvas bounds so they never overflow the wrap
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.clip();
+
     _sorted.forEach(p => {
       const depth=(p.z+1)/2, px=cx+p.x*RADIUS, py=cy+p.y*RADIUS;
       const isfront=depth>0.6;
@@ -2033,6 +2040,8 @@ window.addEventListener('mousemove', e => {
       ctx.fillText(p.tag, px, py + size/2 + 4);
       ctx.restore();
     });
+
+    ctx.restore(); // end icon+label clip
   }
 
   window._sphereTick = function() {

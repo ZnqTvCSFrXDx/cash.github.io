@@ -674,6 +674,23 @@ body.theme-light #bg-canvas {
   #scramble-role, .hero-hash { font-size: clamp(28px, 7vw, 44px) !important; }
 }
 
+@media (max-width: 599px) {
+  .hero-name {
+    font-size: clamp(56px, 18vw, 90px);
+  }
+  .hero-hash {
+    font-size: clamp(22px, 6vw, 36px) !important;
+  }
+  #scramble-role {
+    font-size: clamp(22px, 6vw, 36px) !important;
+  }
+  .hero-roles {
+    gap: 6px;
+    flex-wrap: nowrap;
+    justify-content: center;
+  }
+}
+
 .hero-glow { display: none; }
 
 
@@ -705,6 +722,10 @@ body.theme-light #bg-canvas {
 #contact .section-header {
   justify-content: center;
   margin-left: 0;
+}
+
+#projects .section-header {
+  margin-bottom: 28px;
 }
 
 .section-header--center {
@@ -3046,7 +3067,7 @@ nav.absorbing::after {
   --belt-scale: 1;
   position: relative;
   width: 100%;
-  height: calc(700px * var(--belt-scale));
+  height: calc(560px * var(--belt-scale));
   margin-top: 16px;
   margin-bottom: 0px;
   overflow-x: clip;
@@ -3073,7 +3094,7 @@ nav.absorbing::after {
 
 .belt-scene {
   width: 100%;
-  height: calc(700px * var(--belt-scale));
+  height: calc(560px * var(--belt-scale));
   position: relative;
 }
 
@@ -3083,7 +3104,7 @@ nav.absorbing::after {
 
 .belt-track {
   position: absolute;
-  top: calc(255px * var(--belt-scale, 1));
+  top: calc(205px * var(--belt-scale, 1));
   left: 50%;
   transform: translate(-50%, -50%) scale(var(--belt-scale, 1));
   transform-origin: center center;
@@ -3095,10 +3116,10 @@ nav.absorbing::after {
 /* ── Card shell ── */
 .belt-card {
   position: absolute;
-  width: 452px;
-  height: 588px;
-  top: -294px;
-  left: -226px;
+  width: 370px;
+  height: 480px;
+  top: -240px;
+  left: -185px;
   border-radius: 18px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   transition:
@@ -3528,7 +3549,7 @@ nav.absorbing::after {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(570px * var(--belt-scale, 1));
+  top: calc(455px * var(--belt-scale, 1));
   display: flex;
   justify-content: center;
   margin-top: 0;
@@ -3580,7 +3601,7 @@ nav.absorbing::after {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(640px * var(--belt-scale, 1));
+  top: calc(510px * var(--belt-scale, 1));
   text-align: center;
   font-size: 10px;
   letter-spacing: 0.2em;
@@ -4137,7 +4158,7 @@ nav.absorbing::after {
     padding-bottom: 40px;
   }
   #projects .section-header {
-    margin-bottom: 18px;
+    margin-bottom: 14px;
   }
   .belt-wrap {
     --belt-scale: 0.82;
@@ -4230,7 +4251,7 @@ nav.absorbing::after {
     padding-bottom: 48px;
   }
   #projects .section-header {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
   .belt-wrap {
     --belt-scale: 0.88;
@@ -5960,4 +5981,51 @@ html {
   opacity: 0;
   pointer-events: none;
   z-index: -1;
+}
+/* ── Touch/mobile: clip sphere canvas so icons don't bleed outside ── */
+@media (hover: none) and (pointer: coarse) {
+  .sphere-wrap {
+    overflow: hidden;
+    border-radius: 50%;
+  }
+}
+
+/* ── Touch devices: disable social card hover, make entire card a tap target ── */
+@media (hover: none) and (pointer: coarse) {
+  /* Kill all hover effects on social cards */
+  .social-card:hover,
+  .social-card.absorbing {
+    --clr: var(--accent-l);
+    --clr-glow: rgba(124, 58, 237, 0.12);
+    border-color: rgba(255,255,255,0.14);
+    border-left-color: rgba(157, 95, 245, 0.4);
+    background: rgba(255,255,255,0.06);
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Kill scan line on touch */
+  .social-card:hover .sc-scan { opacity: 0; animation: none; }
+
+  /* Kill icon/name glows on touch */
+  .social-card:hover .social-icon,
+  .social-card:hover .social-icon svg,
+  .social-card:hover .social-name { transform: none; filter: none; text-shadow: none; }
+
+  /* Kill signal bars animation on touch */
+  .social-card:hover .signal-bar:nth-child(1),
+  .social-card:hover .signal-bar:nth-child(2),
+  .social-card:hover .signal-bar:nth-child(3),
+  .social-card:hover .signal-bar:nth-child(4) { animation: none; opacity: 0.3; }
+
+  /* Kill arrow reveal on touch */
+  .social-card:hover .social-arrow { opacity: 0; transform: none; }
+
+  /* Make card feel tappable with a subtle active press */
+  .social-card:active {
+    transform: scale(0.97);
+    background: rgba(124, 58, 237, 0.1);
+    border-color: rgba(157, 95, 245, 0.5);
+    transition: transform 0.1s ease, background 0.1s ease;
+  }
 }
