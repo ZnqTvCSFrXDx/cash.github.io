@@ -53,7 +53,8 @@ nav {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: rgba(10, 10, 10, 0.82);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   overflow: visible;
   gap: 24px;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.4);
@@ -175,6 +176,7 @@ nav.absorbing {
   backdrop-filter: blur(16px);
   gap: 0;
   overflow: hidden;
+  contain: layout style;
   max-height: 58px;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.4);
   transition:
@@ -799,7 +801,8 @@ body.theme-light #bg-canvas {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 64px;
-  align-items: center;
+  align-items: start; /* was center — see note below */
+  isolation: isolate;  /* keeps the sticky globe's stacking inside #about */
 }
 
 .about-left {
@@ -808,12 +811,24 @@ body.theme-light #bg-canvas {
   gap: 36px;
 }
 
+/* Why this changed:
+   align-items:center shrank .about-right down to just the globe's own
+   height and centered that tiny box in the middle of the row. Sticky
+   then had no real runway to operate in, so the globe could drift and
+   paint over the text/panels next to it as you scrolled.
+   align-items:start makes .about-right stretch to the full row height
+   (matching .about-left), giving sticky a proper, bounded area to stick
+   within — the internal flex centering below still keeps the globe
+   visually centered in that taller box. */
 .about-right {
   display: flex;
   align-items: center;
   justify-content: center;
   position: sticky;
   top: 60px;
+  align-self: start;
+  height: 100%;
+  z-index: 1;
 }
 
 /* ── Sphere ──────────────────────────────────────── */
@@ -1032,6 +1047,7 @@ body.theme-light #bg-canvas {
   margin-bottom: 16px;
   max-height: 0;
   overflow: hidden;
+  contain: layout style;
   opacity: 0;
   transform: translateY(-6px);
   transition: max-height 0.42s cubic-bezier(.22,1,.36,1),
@@ -1051,6 +1067,7 @@ body.theme-light #bg-canvas {
   gap: 6px;
   max-height: 0;
   overflow: hidden;
+  contain: layout style;
   opacity: 0;
   transform: translateY(-5px);
   transition: max-height 0.42s cubic-bezier(.22,1,.36,1) 0.08s,
@@ -1294,6 +1311,7 @@ body.theme-light #bg-canvas {
 .card-details {
   max-height: 0;
   overflow: hidden;
+  contain: layout style;
   opacity: 0;
   margin-top: 0;
   transition: max-height 0.5s cubic-bezier(.22,1,.36,1), opacity 0.4s ease, margin 0.4s ease;
@@ -2376,7 +2394,7 @@ aside, section, footer { position: relative; z-index: 1; }
 
 /* ── Custom cursor ring ──────────────────────────── */
 #cursor-ring {
-  will-change: transform, width, height, border-radius, opacity;
+  will-change: transform, opacity;
   transform: translateZ(0);
   position: fixed;
   top: 0;
@@ -2409,7 +2427,7 @@ aside, section, footer { position: relative; z-index: 1; }
     background   0.3s ease,
     box-shadow   0.3s ease,
     filter       0.3s ease;
-  will-change: transform, width, height, border-radius;
+  will-change: transform;
 }
 
 #cursor-ring.clicking { width: 30px; height: 30px; }
@@ -3641,7 +3659,7 @@ nav.absorbing::after {
 
 /* Cursor ring — already animating, keep on GPU */
 #cursor-ring {
-  will-change: transform, width, height;
+  will-change: transform;
 }
 /* ── Cursor Sparks ───────────────────────────────── */
 /* Sparks are drawn directly on bg-canvas — no extra CSS needed */
@@ -4221,7 +4239,7 @@ nav.absorbing::after {
   .hero-name .glitch-main {
     font-size: clamp(56px, 7vw, 80px);
   }
-  .memoji {
+  .memoji svg {
     width: 300px;
   }
   /* ── About ── */
@@ -4346,8 +4364,20 @@ nav.absorbing::after {
   }
   .hero-divider { display: none; }
   .memoji {
-    width: 240px;
     order: -1;
+    margin-bottom: 12px;
+  }
+  .memoji svg {
+    width: 240px; /* wrapper width alone did nothing — the svg has its own width rule */
+  }
+  .hero-hello {
+    margin: 0 0 8px 0; /* desktop's -16/24px assumed hello came first; it doesn't anymore */
+  }
+  .hero-name {
+    margin-top: 8px !important; /* was 28px, tuned for following the big memoji, not short text */
+  }
+  .hero-roles {
+    margin-top: 0;
   }
   .hero-name .glitch-main {
     font-size: clamp(52px, 10vw, 72px);
@@ -4371,6 +4401,9 @@ nav.absorbing::after {
   .about-right {
     order: -1;
     justify-content: center;
+    position: static; /* sticky only makes sense beside text in 2-col desktop layout */
+    top: auto;
+    height: auto;
   }
   .sphere-wrap {
     max-width: 300px;
@@ -4460,14 +4493,24 @@ nav.absorbing::after {
   }
   .hero-divider { display: none; }
   .memoji {
-    width: 200px;
     order: -1;
+    margin-bottom: 10px;
   }
-  .hero-name .glitch-main {
-    font-size: clamp(44px, 13vw, 64px);
+  .memoji svg {
+    width: 200px; /* wrapper width alone did nothing — the svg has its own width rule */
+  }
+  .hero-hello {
+    margin: 0 0 6px 0;
+  }
+  .hero-name {
+    margin-top: 6px !important;
   }
   .hero-roles {
     justify-content: center;
+    margin-top: 0;
+  }
+  .hero-name .glitch-main {
+    font-size: clamp(44px, 13vw, 64px);
   }
   .ai-terminal {
     max-width: 100%;
@@ -4495,6 +4538,9 @@ nav.absorbing::after {
   .about-right {
     order: -1;
     justify-content: center;
+    position: static;
+    top: auto;
+    height: auto;
   }
   .sphere-wrap {
     max-width: 260px;
@@ -4609,7 +4655,7 @@ nav,
 
 /* Cursor ring — most-animated element, needs its own GPU layer */
 #cursor-ring {
-  will-change: transform, width, height, border-radius, opacity;
+  will-change: transform, opacity;
   transform: translateZ(0) translate(-50%, -50%);
 }
 
@@ -4621,7 +4667,7 @@ nav,
 
 /* Promote orbit dots to own layer */
 #dot1, #dot2, #dot3 {
-  will-change: cx, cy, r, opacity;
+  will-change: opacity;
 }
 
 /* Nav pill — only animate compositable properties */
@@ -4632,7 +4678,7 @@ nav {
 
 /* Dev portal — own layer */
 .dev-portal-pill {
-  will-change: max-height, background, box-shadow;
+  will-change: background, box-shadow;
   transform: translateZ(0);
 }
 
@@ -4672,10 +4718,7 @@ nav {
   will-change: transform, opacity;
 }
 
-/* Page-nav fill — only height animates */
-.page-nav-fill {
-  will-change: height;
-}
+/* Page-nav fill — height animates via layout, no compositor hint needed */
 
 /* Remove expensive filter from heading — use text-shadow instead for perf */
 /* (section-header h2 filter kept but only on static state, not animated) */
@@ -4751,7 +4794,7 @@ html {
   transition: opacity 0.7s cubic-bezier(.4,0,.2,1), visibility 0.7s;
 }
 
-/* Layered background: corner streaks + center bloom */
+/* Layered background: center bloom */
 #cash-loader::before {
   content: '';
   position: absolute;
@@ -4761,11 +4804,7 @@ html {
       rgba(157,95,245,0.55) 0%,
       rgba(124,58,237,0.30) 30%,
       rgba(80,20,180,0.12) 60%,
-      transparent 100%),
-    radial-gradient(ellipse 30% 30% at 15% 85%,
-      rgba(192,132,252,0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 30% 30% at 85% 15%,
-      rgba(124,58,237,0.07) 0%, transparent 70%);
+      transparent 100%);
   pointer-events: none;
   z-index: 0;
   animation: centerGlowPulse 3s ease-in-out infinite;
@@ -5027,13 +5066,11 @@ html {
 }
 
 .loader-bar-fill {
-  will-change: width;
   height: 100%;
   width: 0%;
   border-radius: 999px;
   background: linear-gradient(90deg, #4c1d95, #7c3aed 50%, #c084fc);
   position: relative;
-  will-change: width;
   box-shadow:
     0 0 16px 4px rgba(124,58,237,0.55),
     0 0 32px 6px rgba(157,95,245,0.25);
@@ -5082,6 +5119,47 @@ html {
   align-self: flex-start;
   padding-left: 2px;
 }
+
+/* ── Loader — scaled down on mobile only, desktop unchanged ── */
+@media (max-width: 599px) {
+  .loader-logo-wrap {
+    width: 130px;
+    height: 130px;
+    margin-bottom: 24px;
+  }
+  .loader-logo {
+    width: 130px;
+    height: 130px;
+  }
+  .loader-name {
+    font-size: 34px;
+    letter-spacing: 0.3em;
+    margin-bottom: 8px;
+  }
+  @keyframes loaderNameReveal {
+    from { opacity: 0; letter-spacing: 0.5em; filter: blur(4px); }
+    to   { opacity: 1; letter-spacing: 0.3em; filter: blur(0px); }
+  }
+  .loader-tagline {
+    margin-bottom: 32px;
+  }
+  .tag-item {
+    font-size: 8px;
+    padding: 0 10px;
+  }
+  .loader-bar-wrap {
+    width: 86vw;
+    max-width: 320px;
+  }
+  .loader-pct {
+    font-size: 14px;
+    min-width: 44px;
+  }
+  .loader-status {
+    font-size: 9px;
+  }
+}
+
 /* ── Settings Panel ───────────────────────────────── */
 /* ── Settings Panel ─────────────────────────────── */
 .settings-panel {

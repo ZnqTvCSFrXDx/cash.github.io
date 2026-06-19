@@ -2073,8 +2073,22 @@ window.addEventListener('mousemove', e => {
   document.querySelectorAll('.card').forEach(card => {
     const main=card.querySelector('.glitch-main'), gr=card.querySelector('.glitch-r'), gb=card.querySelector('.glitch-b'), shine=card.querySelector('.holo-shine');
     let glitching=false;
-    card.addEventListener('mouseenter',()=>{ if(!main||glitching)return; glitching=true; glitchEl(main); if(gr){gr.style.opacity='1';gr.style.transform='translate(-2px,1px)';}  if(gb){gb.style.opacity='1';gb.style.transform='translate(2px,-1px)';}  setTimeout(()=>{ if(gr){gr.style.opacity='0';gr.style.transform='none';} if(gb){gb.style.opacity='0';gb.style.transform='none';} glitching=false; },380); });
-    card.addEventListener('mousemove',e=>{ const r=card.getBoundingClientRect(), mx=((e.clientX-r.left)/r.width)*100, my=((e.clientY-r.top)/r.height)*100; if(shine){shine.style.setProperty('--mx',mx+'%');shine.style.setProperty('--my',my+'%');} const rx=(0.5-(e.clientY-r.top)/r.height)*14, ry=((e.clientX-r.left)/r.width-0.5)*18; card.style.transform=`perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.025,1.025,1.025)`; });
+    let cachedRect=null, tickScheduled=false, pendingEvt=null;
+    card.addEventListener('mouseenter',()=>{ cachedRect=card.getBoundingClientRect(); if(!main||glitching)return; glitching=true; glitchEl(main); if(gr){gr.style.opacity='1';gr.style.transform='translate(-2px,1px)';}  if(gb){gb.style.opacity='1';gb.style.transform='translate(2px,-1px)';}  setTimeout(()=>{ if(gr){gr.style.opacity='0';gr.style.transform='none';} if(gb){gb.style.opacity='0';gb.style.transform='none';} glitching=false; },380); });
+    card.addEventListener('mousemove',e=>{
+      pendingEvt=e;
+      if(tickScheduled)return;
+      tickScheduled=true;
+      requestAnimationFrame(()=>{
+        tickScheduled=false;
+        if(!cachedRect||!pendingEvt)return;
+        const r=cachedRect, e=pendingEvt;
+        const mx=((e.clientX-r.left)/r.width)*100, my=((e.clientY-r.top)/r.height)*100;
+        if(shine){shine.style.setProperty('--mx',mx+'%');shine.style.setProperty('--my',my+'%');}
+        const rx=(0.5-(e.clientY-r.top)/r.height)*14, ry=((e.clientX-r.left)/r.width-0.5)*18;
+        card.style.transform=`perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.025,1.025,1.025)`;
+      });
+    });
     card.addEventListener('mouseleave',()=>{ card.style.transition='transform .5s cubic-bezier(.22,1,.36,1),box-shadow .3s ease,border-color .3s ease'; card.style.transform='perspective(900px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)'; setTimeout(()=>{card.style.transition='box-shadow .3s ease,border-color .3s ease';},500); });
   });
   window.toggleCard=function(card){ const was=card.classList.contains('expanded'); document.querySelectorAll('.card.expanded').forEach(c=>c.classList.remove('expanded')); if(!was)card.classList.add('expanded'); };
@@ -3097,8 +3111,13 @@ const adminConfirm = document.getElementById('admin-confirm');
 const adminCancel = document.getElementById('admin-cancel');
 const adminError = document.getElementById('admin-error');
 
-const ADMIN_PASS = '013301516002';
-let adminUnlocked = false;
+// SECURITY: no password lives here anymore. Login now calls the
+// server's /login endpoint, which checks the password server-side
+// and hands back a short-lived session token. We only ever hold
+// that token (in sessionStorage — cleared when the tab closes).
+// (RENDER_URL is declared further down, reused here via closure.)
+let adminToken = sessionStorage.getItem('cash33-admin-token') || null;
+let adminUnlocked = !!adminToken;
 
 if (dpSettings && settingsPanel) {
   dpSettings.addEventListener('click', (e) => {
@@ -3114,15 +3133,28 @@ if (dpSettings && settingsPanel) {
     }
   });
 
-  adminConfirm.addEventListener('click', () => {
-    if (adminPassword.value === ADMIN_PASS) {
+  adminConfirm.addEventListener('click', async () => {
+    const pw = adminPassword.value;
+    adminConfirm.disabled = true;
+    try {
+      const r = await fetch(`${RENDER_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      if (!r.ok) throw new Error('bad creds');
+      const data = await r.json();
+      adminToken = data.token;
+      sessionStorage.setItem('cash33-admin-token', adminToken);
       adminUnlocked = true;
       adminPrompt.classList.remove('open');
       setTimeout(() => settingsPanel.classList.add('open'), 280);
-    } else {
+    } catch (e) {
       adminError.textContent = 'Incorrect password.';
       adminPassword.value = '';
       adminPassword.focus();
+    } finally {
+      adminConfirm.disabled = false;
     }
   });
 
@@ -3284,11 +3316,11 @@ if (dpSettings && settingsPanel) {
       const val = contactNameInput.value.trim();
       const footerName = document.querySelector('.footer-name');
       if (val) {
-        contactNameEl.innerHTML = val;
+        contactNameEl.textContent = val; // SECURITY: textContent, not innerHTML — no markup/script injection
         if (footerName) footerName.textContent = val;
         saveState({ displayName: val });
       } else {
-        contactNameEl.innerHTML = 'Justin Clark<br>Mendoza';
+        contactNameEl.innerHTML = 'Justin Clark<br>Mendoza'; // static literal, not user input — safe
         if (footerName) footerName.textContent = 'Justin Clark';
         saveState({ displayName: '' });
       }
@@ -3316,7 +3348,7 @@ if (dpSettings && settingsPanel) {
       const r = await fetch(`${RENDER_URL}/state`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: ADMIN_PASS, state: patch })
+        body: JSON.stringify({ token: adminToken, state: patch })
       });
       if (!r.ok) console.error('saveState bad status:', r.status);
     } catch(e) { console.error('saveState fetch failed:', e); }
@@ -3332,7 +3364,7 @@ if (dpSettings && settingsPanel) {
       if (state.displayName) {
         const nameEl = document.querySelector('.contact-name');
         const footerName = document.querySelector('.footer-name');
-        if (nameEl) nameEl.innerHTML = state.displayName;
+        if (nameEl) nameEl.textContent = state.displayName; // SECURITY: textContent — this value comes from the server/other admins
         if (footerName) footerName.textContent = state.displayName;
         const contactNameInput = document.getElementById('contact-name-input');
         if (contactNameInput) contactNameInput.value = state.displayName;
@@ -3535,7 +3567,7 @@ if (dpSettings && settingsPanel) {
         const res = await fetch(`${RENDER_URL}/reload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: ADMIN_PASS, sessionId: SESSION_ID })
+          body: JSON.stringify({ token: adminToken, sessionId: SESSION_ID })
         });
         if (!res.ok) throw new Error('Bad response: ' + res.status);
         publishBtn.classList.remove('publishing');
@@ -3571,7 +3603,7 @@ if (dpSettings && settingsPanel) {
       const footerName = document.querySelector('.footer-name');
       if (val) {
         contactEmailText.textContent = isVisible ? val : HIDDEN_EMAIL;
-        if (nameEl) nameEl.innerHTML = val;
+        if (nameEl) nameEl.textContent = val; // SECURITY: textContent, not innerHTML
         if (footerName) footerName.textContent = val;
         saveState({ displayName: val });
       } else {
