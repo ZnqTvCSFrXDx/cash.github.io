@@ -21,7 +21,7 @@ const STATE_FILE = path.join(__dirname, 'admin_state.json');
 
 // Frontend origin — used to lock down admin-only routes. Override
 // via env if the GitHub Pages URL ever changes.
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://cash33.github.io';
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://cash-github-io.vercel.app';
 
 // SECURITY: never hardcode a real password fallback. If ADMIN_PASS
 // isn't set in the environment, generate a random one at boot and
