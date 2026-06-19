@@ -504,7 +504,7 @@ body.theme-light #bg-canvas {
   font-weight: 700;
   letter-spacing: 0.06em;
   line-height: 0.85;
-  margin: -60px 0 0 0 !important;
+  margin: 28px 0 0 0 !important;
   padding: 0 !important;
   color: var(--text);
   text-align: center;
@@ -4118,6 +4118,55 @@ nav.absorbing::after {
   }
   .about-grid {
     gap: 56px;
+  }
+}
+
+/* ── Short viewport heights (laptops/Macs with limited vertical room) ──
+   Targets screens like 1366x768 / 1440x900 where the work belt and
+   socials list don't fit without excessive scrolling. ─────────────── */
+@media (min-width: 900px) and (max-height: 920px) {
+  #projects.section {
+    padding-top: 60px;
+    padding-bottom: 50px;
+  }
+  #projects .section-header {
+    margin-bottom: 20px;
+  }
+  .belt-wrap {
+    --belt-scale: 0.72;
+  }
+
+  #socials.section {
+    padding-top: 60px;
+    padding-bottom: 50px;
+  }
+  #socials .section-header {
+    margin-bottom: 24px;
+  }
+  .socials-grid {
+    gap: 8px;
+  }
+  .social-card {
+    padding: 14px 22px;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 800px) {
+  .belt-wrap {
+    --belt-scale: 0.62;
+  }
+  .social-card {
+    padding: 9px 20px;
+  }
+  .socials-grid {
+    gap: 5px;
+  }
+  #socials .section-header {
+    margin-bottom: 16px;
+  }
+  #socials.section {
+    padding-top: 50px;
+    padding-bottom: 40px;
   }
 }
 
