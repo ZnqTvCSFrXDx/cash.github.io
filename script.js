@@ -3142,6 +3142,11 @@ if (dpSettings && settingsPanel) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pw })
       });
+      if (r.status === 429) {
+        adminError.textContent = 'Too many attempts — wait a few minutes and try again.';
+        adminPassword.value = '';
+        return;
+      }
       if (!r.ok) throw new Error('bad creds');
       const data = await r.json();
       adminToken = data.token;
