@@ -1474,12 +1474,19 @@ let _cachedScrollY = 0;
     };
     const availabilityLine = AVAILABILITY_LINES[currentStatus] || AVAILABILITY_LINES.available;
 
-    // Read email visibility
+    // Read email visibility + current value (admin can change this live)
     const emailPill = document.getElementById('contact-email-pill');
     const emailHidden = emailPill && emailPill.classList.contains('restricted-email');
+    const emailTextEl = document.querySelector('.contact-email-text');
+    const rawEmail = emailTextEl ? emailTextEl.textContent.trim() : 'justinclark.mendoza.official@gmail.com';
+    // SECURITY: same instruction-injection guard as displayName — emails only
+    // contain letters, digits, and a small safe set of symbols.
+    const currentEmail = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(rawEmail)
+      ? rawEmail
+      : 'justinclark.mendoza.official@gmail.com';
     const emailLine = emailHidden
       ? '- Email: [private — not available at this time]'
-      : '- Email: justinclark.mendoza.official@gmail.com';
+      : `- Email: ${currentEmail}`;
 
     // Read social visibility
     function socialLine(platform, label, value) {
@@ -1500,7 +1507,7 @@ let _cachedScrollY = 0;
 
     let fallbackParts = [];
     if (!discordHidden) fallbackParts.push('[Discord](https://discord.gg/wwVUFfnRpg)');
-    if (!emailHidden) fallbackParts.push('[justinclark.mendoza.official@gmail.com](mailto:justinclark.mendoza.official@gmail.com)');
+    if (!emailHidden) fallbackParts.push(`[${currentEmail}](mailto:${currentEmail})`);
     const fallbackContact = fallbackParts.length > 0
       ? `Reach him via ${fallbackParts.join(' or ')} to know more.`
       : 'Clark has limited contact options available right now. Check back later.';
