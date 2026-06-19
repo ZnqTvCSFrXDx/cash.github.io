@@ -27,7 +27,7 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://cash33.github.io';
 // isn't set in the environment, generate a random one at boot and
 // print it once — admin login simply won't work with a guessable
 // default, instead of silently working with a known leaked one.
-let ADMIN_PASS = process.env.ADMIN_PASS;
+let ADMIN_PASS = process.env.ADMIN_PASS?.trim();
 if (!ADMIN_PASS) {
   ADMIN_PASS = crypto.randomBytes(16).toString('hex');
   console.warn('⚠️  ADMIN_PASS env var not set! Generated a random one for this run:');
@@ -209,7 +209,9 @@ async function handleLogin(req, parsed, res) {
     json(res, 429, { error: 'Too many attempts, try again later' });
     return;
   }
-  if (parsed.password !== ADMIN_PASS) {
+  const sent = (parsed.password || '').trim();
+  if (sent !== ADMIN_PASS) {
+    console.warn(`Login failed — sent length ${sent.length}, expected length ${ADMIN_PASS.length}`);
     // Small delay to blunt brute-force/timing attacks.
     setTimeout(() => json(res, 403, { error: 'Unauthorized' }), 300);
     return;
