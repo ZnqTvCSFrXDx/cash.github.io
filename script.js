@@ -1222,14 +1222,18 @@ let _rafPaused = false;
 document.addEventListener('visibilitychange', () => { _rafPaused = document.hidden; });
 
 // Track which sections are in view to skip off-screen ticks
-let _heroVisible = true, _aboutVisible = false;
+let _heroVisible = true, _aboutVisible = false, _projectsVisible = false;
 const _heroEl = document.getElementById('hero');
 const _aboutEl = document.getElementById('about');
+const _projectsEl = document.getElementById('projects');
 if (_heroEl) {
   new IntersectionObserver(e => { _heroVisible = e[0].isIntersecting; }, { threshold: 0 }).observe(_heroEl);
 }
 if (_aboutEl) {
   new IntersectionObserver(e => { _aboutVisible = e[0].isIntersecting; }, { threshold: 0 }).observe(_aboutEl);
+}
+if (_projectsEl) {
+  new IntersectionObserver(e => { _projectsVisible = e[0].isIntersecting; }, { threshold: 0 }).observe(_projectsEl);
 }
 
 // Cached scroll value — read once per frame, never in event handlers
@@ -1248,7 +1252,7 @@ let _cachedScrollY = 0;
       if (window._heroTick)   window._heroTick(_cachedScrollY);
     }
     if (_aboutVisible && window._sphereTick) window._sphereTick();
-    if (window._beltTick) window._beltTick();
+    if (_projectsVisible && window._beltTick) window._beltTick();
     if (window._pageNavTick) window._pageNavTick(_cachedScrollY);
     if (window._siTick) window._siTick(_cachedScrollY);
   }
@@ -1544,7 +1548,7 @@ Tools & Skills:
 - Platforms: Windows 10/11
 
 Pricing & Rates:
-- Hourly rate: $4.99 USD / PHP 199 per hour
+- Hourly rate: $2.99 USD / PHP 169 per hour
 - No flat fees — Clark is open to client price offers depending on the scope of work
 - Free consultation available (call or chat, depending on availability)
 

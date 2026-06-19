@@ -68,6 +68,15 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000).unref();
 
+// Same deal for rate-limit buckets — without this they accumulate one
+// entry per unique IP+bucket forever and never get cleared.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateBuckets) {
+    if (now > entry.resetAt) rateBuckets.delete(key);
+  }
+}, 10 * 60 * 1000).unref();
+
 // ── Rate limiting ─────────────────────────────────────────────
 // Simple in-memory fixed-window limiter, keyed by IP + bucket name.
 // Good enough for a single-instance Render free-tier server.
