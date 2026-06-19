@@ -10,15 +10,35 @@
 const http = require('http');
 const https = require('https');
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
+
+// ── Upstash Redis (persistent state) ───────────────
+const UPSTASH_URL   = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const STATE_KEY     = 'admin_state';
+
+async function redisGet(key) {
+  const res = await fetch(`${UPSTASH_URL}/get/${key}`, {
+    headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+  });
+  const json = await res.json();
+  return json.result ? JSON.parse(json.result) : null;
+}
+
+async function redisSet(key, value) {
+  await fetch(`${UPSTASH_URL}/set/${key}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${UPSTASH_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ value: JSON.stringify(value) })
+  });
+}
 
 // ── Config ─────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
-const STATE_FILE = path.join(__dirname, 'admin_state.json');
-
 // Frontend origin — used to lock down admin-only routes. Override
 // via env if the GitHub Pages URL ever changes.
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://cash-github-io.vercel.app';
@@ -118,32 +138,35 @@ const DEFAULT_STATE = {
   }
 };
 
-function loadState() {
+// In-memory cache — populated on first /state request or boot
+let adminState = { ...DEFAULT_STATE, socials: { ...DEFAULT_STATE.socials } };
+
+async function loadState() {
   try {
-    if (fs.existsSync(STATE_FILE)) {
-      const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-      return {
+    const saved = await redisGet(STATE_KEY);
+    if (saved) {
+      adminState = {
         ...DEFAULT_STATE,
         ...saved,
         socials: { ...DEFAULT_STATE.socials, ...(saved.socials || {}) }
       };
     }
   } catch (e) {
-    console.warn('Failed to load state:', e.message);
+    console.warn('Failed to load state from Upstash:', e.message);
   }
-  return { ...DEFAULT_STATE, socials: { ...DEFAULT_STATE.socials } };
+  console.log('State loaded:', adminState);
 }
 
-function persistState(state) {
+async function persistState(state) {
   try {
-    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+    await redisSet(STATE_KEY, state);
   } catch (e) {
-    console.warn('Failed to persist state:', e.message);
+    console.warn('Failed to persist state to Upstash:', e.message);
   }
 }
 
-let adminState = loadState();
-console.log('State loaded:', adminState);
+// Boot: hydrate state from Redis before server starts accepting traffic
+loadState();
 
 // ── Live-sync (SSE) ──────────────────────────────────────────────
 // Open tabs subscribe to /events. When the admin saves a change,
@@ -222,7 +245,19 @@ function handleSSE(req, res) {
 }
 
 // GET /state — returns the current admin-editable site state.
-function handleGetState(req, res) {
+async function handleGetState(req, res) {
+  try {
+    const saved = await redisGet(STATE_KEY);
+    if (saved) {
+      adminState = {
+        ...DEFAULT_STATE,
+        ...saved,
+        socials: { ...DEFAULT_STATE.socials, ...(saved.socials || {}) }
+      };
+    }
+  } catch (e) {
+    console.warn('Redis read failed on /state, using cached:', e.message);
+  }
   json(res, 200, adminState);
 }
 
@@ -288,7 +323,7 @@ async function handleSetState(req, parsed, res) {
     ...patch,
     socials: { ...adminState.socials, ...(patch.socials || {}) }
   };
-  persistState(adminState);
+  await persistState(adminState);
   console.log('State updated + persisted:', adminState);
   json(res, 200, { ok: true });
 }
