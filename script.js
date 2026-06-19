@@ -3391,6 +3391,7 @@ if (dpSettings && settingsPanel) {
 
   const REAL_EMAIL = 'justinclark.mendoza.official@gmail.com';
   const HIDDEN_EMAIL = '••••••••@••••.com';
+  let currentEmailValue = REAL_EMAIL; // updated on load + on apply, used by applyEmailVisibility
 
   const RENDER_URL = 'https://cash-github-io.onrender.com';
 
@@ -3425,6 +3426,8 @@ if (dpSettings && settingsPanel) {
         if (contactNameInput) contactNameInput.value = state.displayName;
       }
 
+      currentEmailValue = (state.contactEmail && state.contactEmail.trim()) || REAL_EMAIL;
+      if (contactEmailInput) contactEmailInput.value = state.contactEmail || '';
       applyEmailVisibility(state.showEmail !== false);
       applyStatus(state.status || 'available');
 
@@ -3453,7 +3456,7 @@ if (dpSettings && settingsPanel) {
     if (!contactEmailPill || !contactEmailText) return;
     if (visible) {
       contactEmailPill.classList.remove('restricted-email');
-      contactEmailText.textContent = REAL_EMAIL;
+      contactEmailText.textContent = currentEmailValue;
       const existing = contactEmailPill.querySelector('.restricted-overlay');
       if (existing) existing.remove();
     } else {
@@ -3671,18 +3674,20 @@ if (dpSettings && settingsPanel) {
     contactEmailApply.addEventListener('click', () => {
       const val = contactEmailInput.value.trim();
       const isVisible = !contactEmailPill.classList.contains('restricted-email');
-      const nameEl = document.querySelector('.contact-name');
-      const footerName = document.querySelector('.footer-name');
+      const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
       if (val) {
+        if (!EMAIL_RE.test(val)) {
+          contactEmailInput.style.borderColor = '#ef4444';
+          setTimeout(() => { contactEmailInput.style.borderColor = ''; }, 1200);
+          return;
+        }
+        currentEmailValue = val;
         contactEmailText.textContent = isVisible ? val : HIDDEN_EMAIL;
-        if (nameEl) nameEl.textContent = val; // SECURITY: textContent, not innerHTML
-        if (footerName) footerName.textContent = val;
-        saveState({ displayName: val });
+        saveState({ contactEmail: val });
       } else {
+        currentEmailValue = REAL_EMAIL;
         contactEmailText.textContent = isVisible ? REAL_EMAIL : HIDDEN_EMAIL;
-        if (nameEl) nameEl.innerHTML = 'Justin Clark<br>Mendoza';
-        if (footerName) footerName.textContent = 'Justin Clark';
-        saveState({ displayName: '' });
+        saveState({ contactEmail: '' });
       }
     });
     contactEmailInput.addEventListener('keydown', (e) => {

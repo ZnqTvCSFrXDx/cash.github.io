@@ -107,6 +107,7 @@ function rateLimited(req, bucket, max, windowMs) {
 const DEFAULT_STATE = {
   showEmail: true,
   displayName: '',
+  contactEmail: '',
   status: 'available',
   socials: {
     github: true,
@@ -277,6 +278,9 @@ async function handleSetState(req, parsed, res) {
   // huge or markup-bearing values into persisted state.
   if (typeof patch.displayName === 'string') {
     patch.displayName = patch.displayName.replace(/[<>]/g, '').slice(0, 100);
+  }
+  if (typeof patch.contactEmail === 'string') {
+    patch.contactEmail = patch.contactEmail.replace(/[<>]/g, '').slice(0, 100);
   }
 
   adminState = {
