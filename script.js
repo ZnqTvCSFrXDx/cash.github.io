@@ -2520,30 +2520,6 @@ document.querySelectorAll('.nav-links a, .nav-logo, a[href^="#"]').forEach(el =>
   sections.forEach(s => flickerObs.observe(s));
 })();
 
-const terminal = document.querySelector('.ai-terminal');
-const input = document.querySelector('.ai-input');
-
-input.addEventListener('focus', () => {
-  terminal.style.transition = 'border-color 1.6s ease, box-shadow 1.6s ease';
-  terminal.style.borderColor = 'rgba(220, 180, 255, 0.95)';
-  terminal.style.boxShadow = `
-    0 0 0 1px rgba(220, 180, 255, 0.3),
-    0 0 12px 3px rgba(200, 150, 255, 0.8),
-    0 0 30px 6px rgba(180, 100, 255, 0.45),
-    0 0 60px 10px rgba(140, 60, 240, 0.2)
-  `;
-});
-
-input.addEventListener('blur', () => {
-  terminal.style.transition = 'border-color 1.6s ease, box-shadow 1.6s ease';
-  terminal.style.borderColor = 'rgba(124, 58, 237, 0.45)';
-  terminal.style.boxShadow = `
-    0 0 0 1px rgba(124, 58, 237, 0.1),
-    0 0 40px rgba(124, 58, 237, 0.2),
-    0 0 80px rgba(124, 58, 237, 0.08)
-  `;
-});
-
 // ── Sphere click: prevent browser selection/drag box ──
 (() => {
   const sphereWrap = document.querySelector('.sphere-wrap');

@@ -4072,9 +4072,6 @@ nav.absorbing::after {
   #hero {
     padding: 0 120px;
   }
-  .hero-name .glitch-main {
-    font-size: clamp(80px, 9vw, 120px);
-  }
   .about-grid {
     gap: 80px;
   }
@@ -4091,6 +4088,9 @@ nav.absorbing::after {
   }
   .contact-name {
     font-size: clamp(60px, 8vw, 100px);
+  }
+  .belt-wrap {
+    --belt-scale: 1.15;
   }
 }
 
