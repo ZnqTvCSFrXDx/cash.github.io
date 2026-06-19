@@ -727,7 +727,7 @@ body.theme-light #bg-canvas {
 }
 
 #projects .section-header {
-  margin-bottom: 28px;
+  margin-bottom: 56px;
 }
 
 .section-header--center {
@@ -4176,7 +4176,7 @@ nav.absorbing::after {
     padding-bottom: 40px;
   }
   #projects .section-header {
-    margin-bottom: 14px;
+    margin-bottom: 36px;
   }
   .belt-wrap {
     --belt-scale: 0.82;
@@ -4269,7 +4269,7 @@ nav.absorbing::after {
     padding-bottom: 48px;
   }
   #projects .section-header {
-    margin-bottom: 20px;
+    margin-bottom: 44px;
   }
   .belt-wrap {
     --belt-scale: 0.88;

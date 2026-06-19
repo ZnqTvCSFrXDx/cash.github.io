@@ -8,21 +8,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
-  <!-- SECURITY: Content-Security-Policy — restricts where scripts, styles,
-       fonts, images, and network requests can come from. Even if an XSS
-       bug ever slips in, the browser will refuse to run injected scripts
-       or talk to unapproved domains. Update this if you add new external
-       resources (fonts, CDNs, APIs) — they'll be silently blocked otherwise. -->
-  <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self';
-    script-src 'self';
-    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    font-src https://fonts.gstatic.com;
-    img-src 'self' data: https://cdn.jsdelivr.net;
-    connect-src 'self' https://cash-github-io.onrender.com https://formspree.io;
-    object-src 'none';
-    base-uri 'self';
-  ">
+  <!-- Security headers (CSP, X-Frame-Options, HSTS, etc.) are now set via
+       vercel.json as real HTTP headers — stronger than a meta tag and
+       supports directives (like frame-ancestors) that meta tags can't. -->
 </head>
 <body>
   <!-- ── Loading Screen ─────────────────────────── -->
@@ -813,19 +801,19 @@
       <div class="contact-modal-body">
         <div class="contact-field">
           <label class="contact-field-label">Name</label>
-          <input type="text" id="cf-name" class="contact-input" placeholder="John Doe" autocomplete="off" />
+          <input type="text" id="cf-name" class="contact-input" placeholder="John Doe" autocomplete="off" maxlength="100" />
         </div>
         <div class="contact-field">
           <label class="contact-field-label">Email</label>
-          <input type="email" id="cf-email" class="contact-input" placeholder="john@example.com" autocomplete="off" />
+          <input type="email" id="cf-email" class="contact-input" placeholder="john@example.com" autocomplete="off" maxlength="254" />
         </div>
         <div class="contact-field">
           <label class="contact-field-label">Subject</label>
-          <input type="text" id="cf-subject" class="contact-input" placeholder="What's this about?" autocomplete="off" />
+          <input type="text" id="cf-subject" class="contact-input" placeholder="What's this about?" autocomplete="off" maxlength="200" />
         </div>
         <div class="contact-field">
           <label class="contact-field-label">Message</label>
-          <textarea id="cf-message" class="contact-input contact-textarea" placeholder="Say something..."></textarea>
+          <textarea id="cf-message" class="contact-input contact-textarea" placeholder="Say something..." maxlength="5000"></textarea>
         </div>
 
         <button class="contact-submit-btn" id="contact-submit-btn">

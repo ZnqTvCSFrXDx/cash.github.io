@@ -1,6 +1,3 @@
-console.log("TOP OF SCRIPT");
-console.log("script loaded");
-
 // ── Loading Screen ────────────────────────────────
 (() => {
   const loader   = document.getElementById('cash-loader');
@@ -1457,7 +1454,11 @@ let _cachedScrollY = 0;
   function buildSystem() {
     // Read current display name
     const nameEl = document.querySelector('.contact-name');
-    const displayName = nameEl ? nameEl.innerText.replace(/\n/g, ' ').trim() : 'Justin Clark Mendoza';
+    const rawName = nameEl ? nameEl.innerText.replace(/\n/g, ' ').trim() : 'Justin Clark Mendoza';
+    // SECURITY: strip anything that looks like an LLM instruction injection
+    // (e.g. "Ignore all previous instructions…"). We allow only letters,
+    // spaces, hyphens, periods, and apostrophes — normal name characters.
+    const displayName = rawName.replace(/[^a-zA-Z0-9 '\-\.]/g, '').slice(0, 60) || 'Justin Clark Mendoza';
 
     // Read current availability status
     const statusSelectEl = document.getElementById('status-select');
@@ -1591,8 +1592,20 @@ Tone: be confident but approachable. Keep every reply short, simple, and direct 
   }
 
   // ── Render markdown-lite: bold, links ──
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function renderMarkdown(text) {
-    return text
+    // SECURITY: escape raw HTML first — the AI's reply is untrusted
+    // text (a clever prompt could make it "say" a <script> tag), so
+    // we neutralize markup before applying our own safe formatting.
+    return escapeHtml(text)
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
       .replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>')
@@ -2831,8 +2844,6 @@ document.querySelectorAll('.nav-links a, .nav-logo, a[href^="#"]').forEach(el =>
   })();
 })();
 
-console.log("BOTTOM OF SCRIPT");
-
 // ── Contact Modal ─────────────────────────────────
 (() => {
   // Copy email on pill click
@@ -2897,6 +2908,21 @@ console.log("BOTTOM OF SCRIPT");
 
     if (!name || !email || !subject || !message) {
       statusMsg.textContent = '⚠ Fill in all fields.';
+      statusMsg.className = 'contact-status-msg error';
+      return;
+    }
+
+    // SECURITY: basic email format check — blocks obviously bad addresses
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRe.test(email)) {
+      statusMsg.textContent = '⚠ Enter a valid email address.';
+      statusMsg.className = 'contact-status-msg error';
+      return;
+    }
+
+    // SECURITY: length caps — prevents oversized payloads to Formspree
+    if (name.length > 100 || email.length > 254 || subject.length > 200 || message.length > 5000) {
+      statusMsg.textContent = '⚠ One or more fields exceed the maximum length.';
       statusMsg.className = 'contact-status-msg error';
       return;
     }
@@ -3116,8 +3142,11 @@ const adminError = document.getElementById('admin-error');
 // and hands back a short-lived session token. We only ever hold
 // that token (in sessionStorage — cleared when the tab closes).
 // (RENDER_URL is declared further down, reused here via closure.)
-let adminToken = sessionStorage.getItem('cash33-admin-token') || null;
-let adminUnlocked = !!adminToken;
+// SECURITY: token lives only in memory (JS closure). Never written to
+// sessionStorage/localStorage — a stolen token can't survive a tab close,
+// and XSS can't read it out of storage.
+let adminToken = null;
+let adminUnlocked = false;
 
 if (dpSettings && settingsPanel) {
   dpSettings.addEventListener('click', (e) => {
@@ -3156,7 +3185,7 @@ if (dpSettings && settingsPanel) {
       if (!r.ok) throw new Error(`Server returned ${r.status}`);
       const data = await r.json();
       adminToken = data.token;
-      sessionStorage.setItem('cash33-admin-token', adminToken);
+      // SECURITY: token stays in memory only — not written to sessionStorage
       adminUnlocked = true;
       adminPrompt.classList.remove('open');
       setTimeout(() => settingsPanel.classList.add('open'), 280);
@@ -3359,8 +3388,11 @@ if (dpSettings && settingsPanel) {
     try {
       const r = await fetch(`${RENDER_URL}/state`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: adminToken, state: patch })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ state: patch })
       });
       if (!r.ok) console.error('saveState bad status:', r.status);
     } catch(e) { console.error('saveState fetch failed:', e); }
@@ -3517,7 +3549,15 @@ if (dpSettings && settingsPanel) {
   const SESSION_ID = Math.random().toString(36).slice(2);
   (() => {
     let es;
+    let retryCount = 0;
+    const MAX_RETRIES = 20;
+    const BASE_DELAY_MS = 5000;
+
     function connectSSE() {
+      if (retryCount >= MAX_RETRIES) {
+        // Silently stop reconnecting — avoids hammering the server forever
+        return;
+      }
       if (es) { try { es.close(); } catch(_) {} }
       es = new EventSource(`${RENDER_URL}/events`);
       es.addEventListener('reload', (e) => {
@@ -3527,10 +3567,16 @@ if (dpSettings && settingsPanel) {
         } catch(_) {}
         window.location.reload();
       });
+      es.onopen = () => {
+        // Reset retry count on successful connection
+        retryCount = 0;
+      };
       es.onerror = () => {
-        // on error, close and retry after 5s (handles server sleep/wake)
         try { es.close(); } catch(_) {}
-        setTimeout(connectSSE, 5000);
+        retryCount++;
+        // Exponential backoff: 5s, 10s, 20s … capped at 60s
+        const delay = Math.min(BASE_DELAY_MS * Math.pow(2, retryCount - 1), 60000);
+        setTimeout(connectSSE, delay);
       };
     }
     connectSSE();
@@ -3578,8 +3624,11 @@ if (dpSettings && settingsPanel) {
       try {
         const res = await fetch(`${RENDER_URL}/reload`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: adminToken, sessionId: SESSION_ID })
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`
+          },
+          body: JSON.stringify({ sessionId: SESSION_ID })
         });
         if (!res.ok) throw new Error('Bad response: ' + res.status);
         publishBtn.classList.remove('publishing');

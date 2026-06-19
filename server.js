@@ -36,9 +36,10 @@ if (!ADMIN_PASS) {
 }
 
 // ── Sessions ──────────────────────────────────────────────────
-// Admin login now happens server-side only. The client never holds
-// the password after the initial /login call — it gets a random
-// opaque token instead, valid for SESSION_TTL_MS.
+// SECURITY: Admin login now happens server-side only. The client never holds
+// the password after the initial /login call — it gets a random opaque token
+// instead, valid for SESSION_TTL_MS. The token is kept only in a JS closure
+// (not sessionStorage/localStorage) so it dies when the tab closes.
 const sessions = new Map(); // token -> expiresAt
 const SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -148,6 +149,9 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
 }
 
 // Stricter CORS for admin/mutating routes — only the real frontend
@@ -159,11 +163,22 @@ function setStrictCors(req, res) {
   }
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
 }
 
 function json(res, status, data) {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
+}
+
+// Extract token from "Authorization: Bearer <token>" header.
+// Falls back to body field for backwards compat during rollout.
+function extractBearerToken(req) {
+  const auth = req.headers['authorization'] || '';
+  if (auth.startsWith('Bearer ')) return auth.slice(7).trim();
+  return null;
 }
 
 // ── Route handlers ────────────────────────────────────────────────
@@ -223,7 +238,8 @@ async function handleLogin(req, parsed, res) {
 // POST /reload — admin-only. Broadcasts a "reload" event to every
 // connected SSE client (so other open tabs refresh after a change).
 async function handleReload(req, parsed, res) {
-  if (!isValidSession(parsed.token)) {
+  const token = extractBearerToken(req) || parsed.token;
+  if (!isValidSession(token)) {
     res.writeHead(403);
     res.end();
     return;
@@ -239,7 +255,8 @@ async function handleReload(req, parsed, res) {
 // POST /state — admin-only. Merges a partial state patch into the
 // persisted admin state.
 async function handleSetState(req, parsed, res) {
-  if (!isValidSession(parsed.token)) {
+  const token = extractBearerToken(req) || parsed.token;
+  if (!isValidSession(token)) {
     json(res, 403, { error: 'Unauthorized' });
     return;
   }
@@ -320,11 +337,11 @@ async function handleAI(req, parsed, res) {
 // No framework — just a manual method/url switch. Routes are listed
 // in the order a request is most likely to hit them.
 
-const ADMIN_ROUTES = new Set(['/login', '/reload', '/state']);
+const RESTRICTED_ROUTES = new Set(['/login', '/reload', '/state', '/']);
 const MAX_BODY_BYTES = 50 * 1024; // 50KB is plenty for these payloads
 
 http.createServer((req, res) => {
-  if (ADMIN_ROUTES.has(req.url) && req.method !== 'GET') {
+  if (RESTRICTED_ROUTES.has(req.url) && req.method !== 'GET') {
     setStrictCors(req, res);
   } else {
     setCors(res);
