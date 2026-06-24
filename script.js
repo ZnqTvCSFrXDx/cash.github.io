@@ -2999,6 +2999,113 @@ document.querySelectorAll('.nav-links a, .nav-logo, a[href^="#"]').forEach(el =>
     });
   }
 })();
+// ── Apply persisted state for ALL visitors on every page load ────
+// This runs unconditionally — no admin login required — so settings
+// saved via the admin panel are visible to every visitor after publish.
+(async function applyPersistedState() {
+  const RENDER_URL      = 'https://cash-github-io.onrender.com';
+  const STATE_READ_KEY  = 'sk_read_7f3a9c2e1b4d8f6a0e5c3b7d9f2a4e8c';
+  const REAL_EMAIL      = 'justinclark.mendoza.official@gmail.com';
+  const HIDDEN_EMAIL    = '••••••••@••••.com';
+  const STATUS_LABELS   = { available: 'AVAILABLE', busy: 'BUSY', offline: 'NOT AVAILABLE' };
+  const HIRE_TAG_TEXT   = { available: 'HIRE ME',  busy: 'LIMITED',  offline: 'UNAVAILABLE' };
+  const OJ_STATUS_TEXT  = { available: 'OPEN TO WORK', busy: 'LIMITED AVAILABILITY', offline: 'NOT TAKING WORK' };
+  const PREVIEW_STATUS  = { available: 'OPEN TO WORK', busy: 'LIMITED AVAILABILITY', offline: 'NOT AVAILABLE' };
+  const LOCK_SVG        = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+  const PLATFORM_LABELS = { github:'GitHub', discord:'Discord', instagram:'Instagram', linkedin:'LinkedIn', onlinejobs:'OnlineJobs' };
+
+  try {
+    const res = await fetch(`${RENDER_URL}/state`, {
+      headers: { Authorization: `Bearer ${STATE_READ_KEY}` }
+    });
+    if (!res.ok) return;
+    const state = await res.json();
+
+    // ── Display name ──
+    if (state.displayName) {
+      const nameEl     = document.querySelector('.contact-name');
+      const footerName = document.querySelector('.footer-name');
+      if (nameEl)     nameEl.textContent     = state.displayName;
+      if (footerName) footerName.textContent = state.displayName;
+    }
+
+    // ── Email visibility ──
+    const emailText = document.querySelector('.contact-email-text');
+    const emailPill = document.getElementById('contact-email-pill');
+    if (emailText && emailPill) {
+      const emailVal = (state.contactEmail && state.contactEmail.trim()) || REAL_EMAIL;
+      if (state.showEmail === false) {
+        emailPill.classList.add('restricted-email');
+        emailText.textContent = HIDDEN_EMAIL;
+        if (!emailPill.querySelector('.restricted-overlay')) {
+          const ov = document.createElement('div');
+          ov.className = 'restricted-overlay';
+          ov.innerHTML = `<div class="restricted-overlay-icon">${LOCK_SVG}</div><span class="restricted-overlay-label">Email</span>`;
+          emailPill.appendChild(ov);
+        }
+      } else {
+        emailPill.classList.remove('restricted-email');
+        emailText.textContent = emailVal;
+        const ex = emailPill.querySelector('.restricted-overlay');
+        if (ex) ex.remove();
+      }
+    }
+
+    // ── Availability status ──
+    if (state.status) {
+      const s           = state.status;
+      const livePill    = document.getElementById('contact-status-pill');
+      const statusText  = livePill ? livePill.querySelector('.contact-status-text') : null;
+      const liHireTag   = document.getElementById('li-hire-tag');
+      const ojHireTag   = document.getElementById('oj-hire-tag');
+      const ojStatusLbl = document.getElementById('oj-status-label');
+      const liCard      = document.querySelector('.social-card[data-platform="linkedin"]');
+      const ojCard      = document.querySelector('.social-card[data-platform="onlinejobs"]');
+      const liPreview   = liCard ? liCard.querySelector('.sc-preview') : null;
+      const ojPreview   = ojCard ? ojCard.querySelector('.sc-preview') : null;
+
+      if (livePill) {
+        livePill.classList.remove('is-busy', 'is-offline');
+        if (s === 'busy')    livePill.classList.add('is-busy');
+        if (s === 'offline') livePill.classList.add('is-offline');
+      }
+      if (statusText)  statusText.textContent  = STATUS_LABELS[s]  || STATUS_LABELS.available;
+      [liHireTag, ojHireTag].forEach(tag => {
+        if (!tag) return;
+        tag.classList.remove('is-busy', 'is-offline');
+        if (s === 'busy')    tag.classList.add('is-busy');
+        if (s === 'offline') tag.classList.add('is-offline');
+        tag.textContent = HIRE_TAG_TEXT[s] || HIRE_TAG_TEXT.available;
+      });
+      if (ojStatusLbl) {
+        ojStatusLbl.classList.remove('is-busy', 'is-offline');
+        if (s === 'busy')    ojStatusLbl.classList.add('is-busy');
+        if (s === 'offline') ojStatusLbl.classList.add('is-offline');
+        ojStatusLbl.textContent = OJ_STATUS_TEXT[s] || OJ_STATUS_TEXT.available;
+      }
+      if (liPreview) liPreview.dataset.status = PREVIEW_STATUS[s] || PREVIEW_STATUS.available;
+      if (ojPreview) ojPreview.dataset.status = PREVIEW_STATUS[s] || PREVIEW_STATUS.available;
+    }
+
+    // ── Social card visibility ──
+    Object.entries(state.socials || {}).forEach(([platform, visible]) => {
+      const card = document.querySelector(`.social-card[data-platform="${platform}"]`);
+      if (!card) return;
+      card.classList.toggle('restricted', !visible);
+      const existing = card.querySelector('.restricted-overlay');
+      if (!visible && !existing) {
+        const ov = document.createElement('div');
+        ov.className = 'restricted-overlay';
+        ov.innerHTML = `<div class="restricted-overlay-icon">${LOCK_SVG}</div><span class="restricted-overlay-label">${PLATFORM_LABELS[platform] || platform}</span>`;
+        card.appendChild(ov);
+      } else if (visible && existing) {
+        existing.remove();
+      }
+    });
+
+  } catch(e) { console.error('applyPersistedState failed:', e); }
+})();
+
 // ── Admin Settings Panel ─────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
 const dpSettings = document.getElementById('dp-settings');

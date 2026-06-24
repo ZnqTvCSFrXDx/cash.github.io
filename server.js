@@ -24,16 +24,20 @@ async function redisGet(key) {
   return json.result ? JSON.parse(json.result) : null;
 }
 
-// FIX #2: Use POST with JSON body so state is never logged in URLs
+// FIX #2: Use POST with plain-text body so Upstash stores the raw JSON string.
+// Upstash REST /set/:key with Content-Type: text/plain treats the body as the
+// literal value to store — then redisGet does JSON.parse(result) to recover it.
+// Using Content-Type: application/json caused Upstash to reject/misparse the
+// body, so state was never actually persisted (silent failure).
 async function redisSet(key, value) {
-  // Single JSON.stringify — value is an object, body expects a JSON string
+  const serialized = JSON.stringify(value);
   await fetch(`${UPSTASH_URL}/set/${key}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${UPSTASH_TOKEN}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'text/plain'
     },
-    body: JSON.stringify(value)
+    body: serialized
   });
 }
 
