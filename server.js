@@ -132,14 +132,48 @@ const DEFAULT_STATE = {
 
 let adminState = { ...DEFAULT_STATE, socials: { ...DEFAULT_STATE.socials } };
 
+// Whitelist: only these exact fields, in these exact shapes, are ever
+// allowed into adminState — whether they come from Redis or from a
+// /state POST body. Anything else (junk, oversized strings, stray
+// objects) is silently dropped instead of blindly trusted/merged.
+function sanitizeState(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+
+  const clean = {};
+
+  if (typeof raw.displayName === 'string') {
+    clean.displayName = raw.displayName.replace(/[<>]/g, '').slice(0, 100);
+  }
+  if (typeof raw.contactEmail === 'string') {
+    clean.contactEmail = raw.contactEmail.replace(/[<>]/g, '').slice(0, 100);
+  }
+  if (typeof raw.showEmail === 'boolean') {
+    clean.showEmail = raw.showEmail;
+  }
+  if (['available', 'busy', 'offline'].includes(raw.status)) {
+    clean.status = raw.status;
+  }
+  if (raw.socials && typeof raw.socials === 'object' && !Array.isArray(raw.socials)) {
+    clean.socials = {};
+    for (const key of Object.keys(DEFAULT_STATE.socials)) {
+      if (typeof raw.socials[key] === 'boolean') {
+        clean.socials[key] = raw.socials[key];
+      }
+    }
+  }
+
+  return clean;
+}
+
 async function loadState() {
   try {
     const saved = await redisGet(STATE_KEY);
     if (saved) {
+      const clean = sanitizeState(saved);
       adminState = {
         ...DEFAULT_STATE,
-        ...saved,
-        socials: { ...DEFAULT_STATE.socials, ...(saved.socials || {}) }
+        ...clean,
+        socials: { ...DEFAULT_STATE.socials, ...(clean.socials || {}) }
       };
     }
   } catch (e) {
@@ -148,7 +182,16 @@ async function loadState() {
   console.log('State loaded OK');
 }
 
+// Safety net: real state is always under 1KB. If it's ever bigger than
+// this, something is wrong upstream — refuse to save instead of finding
+// out from Upstash later.
+const MAX_STATE_BYTES = 100 * 1024; // 100KB
+
 async function persistState(state) {
+  const serialized = JSON.stringify(state);
+  if (serialized.length > MAX_STATE_BYTES) {
+    throw new Error(`Refusing to persist abnormally large state (${serialized.length} bytes) — likely a bug, not real data`);
+  }
   await redisSet(STATE_KEY, state); // throws on failure — caller must handle
 }
 
@@ -449,14 +492,7 @@ async function handleSetState(req, parsed, res) {
     json(res, 403, { error: 'Unauthorized' }, req, true);
     return;
   }
-  const patch = parsed.state || {};
-
-  if (typeof patch.displayName === 'string') {
-    patch.displayName = patch.displayName.replace(/[<>]/g, '').slice(0, 100);
-  }
-  if (typeof patch.contactEmail === 'string') {
-    patch.contactEmail = patch.contactEmail.replace(/[<>]/g, '').slice(0, 100);
-  }
+  const patch = sanitizeState(parsed.state || {});
 
   const newState = {
     ...adminState,
