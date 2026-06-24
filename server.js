@@ -141,7 +141,7 @@ async function loadState() {
   } catch (e) {
     console.warn('Failed to load state from Upstash:', e.message);
   }
-  console.log('State loaded:', adminState);
+  console.log('State loaded OK');
 }
 
 async function persistState(state) {
@@ -464,7 +464,7 @@ async function handleSetState(req, parsed, res) {
     socials: { ...adminState.socials, ...(patch.socials || {}) }
   };
   await persistState(adminState);
-  console.log('State updated + persisted:', adminState);
+  console.log('State updated + persisted');
   json(res, 200, { ok: true }, req, true);
 }
 
@@ -505,8 +505,17 @@ async function handleAI(req, parsed, res) {
 
   const proxy = https.request(options, r => {
     let data = '';
-    r.on('data', d => data += d);
+    let tooBig = false;
+    r.on('data', d => {
+      data += d;
+      if (data.length > 200 * 1024) { // 200KB cap — Groq replies are never this big
+        tooBig = true;
+        r.destroy();
+        json(res, 500, { error: 'Response too large' }, req, false);
+      }
+    });
     r.on('end', () => {
+      if (tooBig) return;
       try {
         const reply = JSON.parse(data).choices?.[0]?.message?.content || 'No response.';
         json(res, 200, { content: [{ text: reply }] }, req, false);
