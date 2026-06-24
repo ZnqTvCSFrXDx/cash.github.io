@@ -3000,10 +3000,8 @@ document.querySelectorAll('.nav-links a, .nav-logo, a[href^="#"]').forEach(el =>
   }
 })();
 // ── Apply persisted state for ALL visitors on every page load ────
-// This runs unconditionally — no admin login required — so settings
-// saved via the admin panel are visible to every visitor after publish.
-// Wrapped in DOMContentLoaded so all DOM elements are guaranteed ready
-// before we try to query and update them.
+// Wrapped in DOMContentLoaded — guarantees all DOM elements exist
+// before we query and update them.
 document.addEventListener('DOMContentLoaded', async function applyPersistedState() {
   const RENDER_URL      = 'https://cash-github-io.onrender.com';
   const STATE_READ_KEY  = 'sk_read_7f3a9c2e1b4d8f6a0e5c3b7d9f2a4e8c';
@@ -3168,6 +3166,25 @@ if (dpSettings && settingsPanel) {
   adminConfirm.addEventListener('click', async () => {
     const pw = adminPassword.value;
     adminConfirm.disabled = true;
+    adminError.textContent = '';
+
+    // Wake Render before attempting login — free tier sleeps after inactivity.
+    // Show status so user knows it's working, not frozen.
+    const prevError = adminError.textContent;
+    adminError.style.color = '#a78bfa';
+    adminError.textContent = 'Connecting to server...';
+    let woke = false;
+    try {
+      woke = await wakeServer(60000);
+    } catch(_) {}
+    adminError.style.color = '';
+    if (!woke) {
+      adminError.textContent = 'Server unreachable — try again in a moment.';
+      adminConfirm.disabled = false;
+      return;
+    }
+    adminError.textContent = '';
+
     try {
       const r = await fetch(`${RENDER_URL}/login`, {
         method: 'POST',
@@ -3188,14 +3205,13 @@ if (dpSettings && settingsPanel) {
       if (!r.ok) throw new Error(`Server returned ${r.status}`);
       const data = await r.json();
       adminToken = data.token;
-      _storedPass = pw; // keep for silent re-auth if server restarts
-      // SECURITY: token stays in memory only — not written to sessionStorage
+      _storedPass = pw;
       adminUnlocked = true;
       adminPrompt.classList.remove('open');
       setTimeout(() => settingsPanel.classList.add('open'), 280);
     } catch (e) {
       console.error('Login request failed:', e);
-      adminError.textContent = 'Could not reach server — check console for details.';
+      adminError.textContent = 'Could not reach server — try again.';
       adminPassword.value = '';
       adminPassword.focus();
     } finally {
@@ -3298,7 +3314,8 @@ if (dpSettings && settingsPanel) {
     settingsClose.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsPanel.classList.remove('open');
-    logoutAdmin(); // FIX #5: invalidate session when admin closes panel
+    // Session stays alive — no logout on close. Token expires naturally (1hr).
+    // This prevents needing to re-login every time you reopen the panel.
   });
 
   document.addEventListener('click', (e) => {
@@ -3608,40 +3625,35 @@ if (dpSettings && settingsPanel) {
 
   async function wakeServer(timeout = 90000, labelEl = null) {
     const start = Date.now();
-    let attempt = 0;
     while (Date.now() - start < timeout) {
-      attempt++;
       try {
         const r = await fetch(`${RENDER_URL}/ping`, { cache: 'no-store' });
         if (r.ok) return true;
       } catch(_) {}
       const elapsed = Math.round((Date.now() - start) / 1000);
-      const remaining = Math.round((timeout - (Date.now() - start)) / 1000);
-      if (labelEl && remaining > 0) {
-        labelEl.textContent = `Waking... ${elapsed}s`;
-      }
+      if (labelEl) labelEl.textContent = `Waking... ${elapsed}s`;
       await new Promise(res => setTimeout(res, 1500));
     }
     return false;
   }
 
-  // Check if current token is still valid. If not, silently re-login using
-  // the stored password (set at login time, memory-only). Falls back to
-  // showing the prompt only if no stored password is available.
-  // Returns true if we have a valid token after the call.
+  // Ensures we have a valid session token before publish.
+  // 1. If token exists, verify it's still accepted by the server.
+  // 2. If invalid/expired, silently re-login using stored password.
+  // 3. If that fails too, show the login prompt.
+  // Returns true if a valid token is ready.
   async function validateOrRefreshToken(labelEl) {
-    if (!adminToken) return false;
+    // Step 1: if we have a token, quick-check it
+    if (adminToken) {
+      try {
+        const r = await fetch(`${RENDER_URL}/state`, {
+          headers: { Authorization: `Bearer ${adminToken}` }
+        });
+        if (r.ok) return true; // still valid
+      } catch(_) {}
+    }
 
-    // Quick check: try /state with current token
-    try {
-      const r = await fetch(`${RENDER_URL}/state`, {
-        headers: { Authorization: `Bearer ${adminToken}` }
-      });
-      if (r.ok) return true; // token still valid
-    } catch(_) {}
-
-    // Token expired/invalid (server restarted).
-    // Attempt silent re-login using stored password.
+    // Step 2: token missing or rejected — try silent re-login
     if (_storedPass) {
       if (labelEl) labelEl.textContent = 'Re-authenticating...';
       try {
@@ -3653,27 +3665,25 @@ if (dpSettings && settingsPanel) {
         if (r.ok) {
           const data = await r.json();
           adminToken = data.token;
-          return true; // new token ready — publish continues automatically
+          adminUnlocked = true;
+          return true;
         }
       } catch(_) {}
     }
 
-    // Silent re-auth failed or no stored password — fall back to prompt.
+    // Step 3: all failed — force re-login via prompt
     if (labelEl) labelEl.textContent = 'Session expired';
     publishBtn.classList.remove('publishing');
     publishBtn.disabled = false;
-
     adminToken = null;
     adminUnlocked = false;
     settingsPanel.classList.remove('open');
-
     setTimeout(() => {
       adminPrompt.classList.add('open');
       adminPassword.value = '';
       adminError.textContent = 'Session expired — please log in again, then click Publish.';
       setTimeout(() => adminPassword.focus(), 100);
-    }, 600);
-
+    }, 400);
     return false;
   }
 
@@ -3683,25 +3693,31 @@ if (dpSettings && settingsPanel) {
       publishBtn.classList.add('publishing');
       publishBtn.disabled = true;
 
-      // Step 1: wake server if sleeping
-      label.textContent = 'Waking... 0s';
-      const alive = await wakeServer(90000, label);
-      if (!alive) {
-        publishBtn.classList.remove('publishing');
-        publishBtn.disabled = false;
-        label.textContent = 'Server offline';
-        setTimeout(() => { label.textContent = 'Publish'; }, 4000);
-        return;
+      // Step 1: Wake server + validate/refresh session in one pass.
+      // wakeServer already ran during login, but Render may have slept again.
+      // validateOrRefreshToken handles the /state ping which also confirms the
+      // server is alive — so we don't need a separate wake step here.
+      label.textContent = 'Checking session...';
+      let tokenOk = await validateOrRefreshToken(label);
+
+      // If token check failed because server is sleeping, wake it then retry once.
+      if (!tokenOk && _storedPass) {
+        label.textContent = 'Waking... 0s';
+        const alive = await wakeServer(90000, label);
+        if (!alive) {
+          publishBtn.classList.remove('publishing');
+          publishBtn.disabled = false;
+          label.textContent = 'Server offline';
+          setTimeout(() => { label.textContent = 'Publish'; }, 4000);
+          return;
+        }
+        label.textContent = 'Re-authenticating...';
+        tokenOk = await validateOrRefreshToken(label);
       }
 
-      // Step 2: validate session token (server restart wipes in-memory sessions)
-      label.textContent = 'Checking session...';
-      const tokenOk = await validateOrRefreshToken(label);
-      if (!tokenOk) return; // validateOrRefreshToken already handled UI reset
+      if (!tokenOk) return; // prompt already shown by validateOrRefreshToken
 
-      // Step 3: persist current state to server BEFORE broadcasting reload.
-      // This ensures visitors get the latest settings even if Render restarted
-      // and lost the in-memory adminState since the last toggle/save.
+      // Step 2: Save full state snapshot to Redis
       label.textContent = 'Saving...';
       try {
         const stateSnapshot = {
@@ -3729,7 +3745,7 @@ if (dpSettings && settingsPanel) {
         return;
       }
 
-      // Step 4: broadcast reload to all open visitor tabs
+      // Step 3: Broadcast reload to all open visitor tabs
       label.textContent = 'Publishing...';
       try {
         const res = await fetch(`${RENDER_URL}/reload`, {
