@@ -3101,6 +3101,39 @@ document.addEventListener('DOMContentLoaded', async function applyPersistedState
       }
     });
 
+    // ── SSE: live reload for ALL visitors ──────────────────────────
+    // This runs for every tab (admin + visitors) so the publish broadcast
+    // actually reaches people. The admin block has its own copy with the
+    // SESSION_ID self-reload guard; this one is intentionally simpler.
+    (() => {
+      let es;
+      let retryCount = 0;
+      const MAX_RETRIES = 20;
+      const BASE_DELAY_MS = 5000;
+
+      function connectSSE() {
+        if (retryCount >= MAX_RETRIES) return;
+        if (es) { try { es.close(); } catch(_) {} }
+        es = new EventSource(`${RENDER_URL}/events`);
+        es.addEventListener('reload', (e) => {
+          // Skip if this tab is the one that triggered the publish
+          try {
+            const data = JSON.parse(e.data);
+            if (window._adminSessionId && data.from === window._adminSessionId) return;
+          } catch(_) {}
+          window.location.reload();
+        });
+        es.onopen = () => { retryCount = 0; };
+        es.onerror = () => {
+          try { es.close(); } catch(_) {}
+          retryCount++;
+          const delay = Math.min(BASE_DELAY_MS * Math.pow(2, retryCount - 1), 60000);
+          setTimeout(connectSSE, delay);
+        };
+      }
+      connectSSE();
+    })();
+
   } catch(e) { console.error('applyPersistedState failed:', e); }
 });
 
@@ -3570,6 +3603,7 @@ if (dpSettings && settingsPanel) {
 
   // ── SSE: live reload listener ──
   const SESSION_ID = Math.random().toString(36).slice(2);
+  window._adminSessionId = SESSION_ID; // exposed so the visitor SSE can skip self-reload
   (() => {
     let es;
     let retryCount = 0;
