@@ -3012,12 +3012,19 @@ document.addEventListener('DOMContentLoaded', async function applyPersistedState
   const LOCK_SVG        = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
   const PLATFORM_LABELS = { github:'GitHub', discord:'Discord', instagram:'Instagram', linkedin:'LinkedIn', onlinejobs:'OnlineJobs' };
 
+  let state = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const res = await fetch(`${RENDER_URL}/state`, {
+        headers: { Authorization: `Bearer ${STATE_READ_KEY}` },
+        cache: 'no-store'
+      });
+      if (res.ok) { state = await res.json(); break; }
+    } catch(_) {}
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  if (!state) return;
   try {
-    const res = await fetch(`${RENDER_URL}/state`, {
-      headers: { Authorization: `Bearer ${STATE_READ_KEY}` }
-    });
-    if (!res.ok) return;
-    const state = await res.json();
 
     // ── Display name ──
     if (state.displayName) {
@@ -3450,14 +3457,23 @@ if (dpSettings && settingsPanel) {
     } catch(e) { console.error('saveState fetch failed:', e); }
   }
 
-  // Load state from Render and apply to UI
+  // Load state from Render and apply to UI — retries up to 5x so a
+  // post-publish reload doesn't silently fail if Render is still waking.
   async function loadAndApplyState() {
+    let state = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const res = await fetch(`${RENDER_URL}/state`, {
+          headers: { Authorization: `Bearer ${STATE_READ_KEY}` },
+          cache: 'no-store'
+        });
+        if (res.ok) { state = await res.json(); break; }
+      } catch(_) {}
+      // wait 2s before retry
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    if (!state) return; // server unreachable after all retries
     try {
-      const res = await fetch(`${RENDER_URL}/state`, {
-        headers: { Authorization: `Bearer ${STATE_READ_KEY}` }
-      });
-      if (!res.ok) return;
-      const state = await res.json();
 
       if (state.displayName) {
         const nameEl = document.querySelector('.contact-name');
