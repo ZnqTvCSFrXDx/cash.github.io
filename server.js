@@ -154,14 +154,9 @@ async function persistState(state) {
 
 loadState();
 
-// ── Self-ping keep-alive — prevents Render free tier spin-down ──
-// Pings itself every 4 min so the server stays warm even with no
-// open visitor tabs. Without this, Render sleeps after ~15 min of
-// no external traffic and the next Publish hits a cold start.
+// Self-ping every 4 min — keeps Render warm so cold starts are less frequent.
 setInterval(() => {
-  http.get(`http://localhost:${PORT}/ping`, (r) => {
-    r.resume(); // drain the response so the socket closes cleanly
-  }).on('error', () => {}); // silently ignore if server isn't ready yet
+  http.get(`http://localhost:${PORT}/ping`, r => r.resume()).on('error', () => {});
 }, 4 * 60 * 1000).unref();
 
 // ── FIX #1: Hardcoded AI system prompt ──────────────────────────
@@ -360,7 +355,23 @@ function handleSSE(req, res) {
   });
   res.write('retry: 3000\n\n');
   sseClients.add(res);
-  req.on('close', () => sseClients.delete(res));
+
+  // Heartbeat every 25s — culls dead connections that never fired 'close'.
+  // If the socket is gone, res.write() throws and we clean up immediately.
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(': heartbeat\n\n');
+    } catch(_) {
+      clearInterval(heartbeat);
+      sseClients.delete(res);
+      try { res.destroy(); } catch(_) {}
+    }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    sseClients.delete(res);
+  });
 }
 
 // FIX #1 + #4: /state GET now requires STATE_READ_KEY,
