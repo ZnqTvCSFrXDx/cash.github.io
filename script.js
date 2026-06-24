@@ -3002,7 +3002,9 @@ document.querySelectorAll('.nav-links a, .nav-logo, a[href^="#"]').forEach(el =>
 // ── Apply persisted state for ALL visitors on every page load ────
 // This runs unconditionally — no admin login required — so settings
 // saved via the admin panel are visible to every visitor after publish.
-(async function applyPersistedState() {
+// Wrapped in DOMContentLoaded so all DOM elements are guaranteed ready
+// before we try to query and update them.
+document.addEventListener('DOMContentLoaded', async function applyPersistedState() {
   const RENDER_URL      = 'https://cash-github-io.onrender.com';
   const STATE_READ_KEY  = 'sk_read_7f3a9c2e1b4d8f6a0e5c3b7d9f2a4e8c';
   const REAL_EMAIL      = 'justinclark.mendoza.official@gmail.com';
@@ -3104,7 +3106,7 @@ document.querySelectorAll('.nav-links a, .nav-logo, a[href^="#"]').forEach(el =>
     });
 
   } catch(e) { console.error('applyPersistedState failed:', e); }
-})();
+});
 
 // ── Admin Settings Panel ─────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
