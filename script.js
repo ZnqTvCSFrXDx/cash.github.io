@@ -3276,7 +3276,7 @@ if (dpSettings && settingsPanel) {
   const RENDER_URL = 'https://cash-github-io.onrender.com';
   // Read-only key — allows page to load state on boot without admin login.
   // Must match STATE_READ_KEY env var set in Render.
-  const STATE_READ_KEY = 'REPLACE_WITH_YOUR_STATE_READ_KEY';
+  const STATE_READ_KEY = 'sk_read_7f3a9c2e1b4d8f6a0e5c3b7d9f2a4e8c';
 
   // Save state to Render
   async function saveState(patch) {
