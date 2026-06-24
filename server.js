@@ -288,11 +288,13 @@ function setCors(res) {
 
 function setStrictCors(req, res) {
   const origin = req.headers.origin;
-  if (origin === ALLOWED_ORIGIN) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
+  // Always reflect the allowed origin — if the origin matches, reflect it;
+  // if missing/different (e.g. Render proxy strips it), still send the header
+  // so the browser preflight passes. Auth tokens still gate actual writes.
+  res.setHeader('Access-Control-Allow-Origin', origin === ALLOWED_ORIGIN ? origin : ALLOWED_ORIGIN);
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
@@ -488,7 +490,11 @@ const RESTRICTED_ROUTES = new Set(['/login', '/logout', '/reload', '/state', '/'
 const MAX_BODY_BYTES     = 50 * 1024;
 
 http.createServer((req, res) => {
-  if (RESTRICTED_ROUTES.has(req.url) && req.method !== 'GET') {
+  // Always apply CORS headers first — OPTIONS preflight must get them
+  // regardless of route. Restricted POST routes get strict (Vercel-only)
+  // origin; everything else gets wildcard.
+  const isRestrictedPost = RESTRICTED_ROUTES.has(req.url) && req.method !== 'GET';
+  if (isRestrictedPost || req.method === 'OPTIONS') {
     setStrictCors(req, res);
   } else {
     setCors(res);

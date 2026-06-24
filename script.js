@@ -3385,8 +3385,9 @@ if (dpSettings && settingsPanel) {
   // Must match STATE_READ_KEY env var set in Render.
   const STATE_READ_KEY = 'sk_read_7f3a9c2e1b4d8f6a0e5c3b7d9f2a4e8c';
 
-  // Save state to Render
+  // Save state to Render — no-op if not logged in
   async function saveState(patch) {
+    if (!adminToken) return; // not authenticated, skip silently
     try {
       const r = await fetch(`${RENDER_URL}/state`, {
         method: 'POST',
