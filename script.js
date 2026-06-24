@@ -3604,13 +3604,20 @@ if (dpSettings && settingsPanel) {
   // ── Publish button ──
   const publishBtn = document.getElementById('settings-publish');
 
-  async function wakeServer(timeout = 20000) {
+  async function wakeServer(timeout = 90000, labelEl = null) {
     const start = Date.now();
+    let attempt = 0;
     while (Date.now() - start < timeout) {
+      attempt++;
       try {
         const r = await fetch(`${RENDER_URL}/ping`, { cache: 'no-store' });
         if (r.ok) return true;
       } catch(_) {}
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      const remaining = Math.round((timeout - (Date.now() - start)) / 1000);
+      if (labelEl && remaining > 0) {
+        labelEl.textContent = `Waking... ${elapsed}s`;
+      }
       await new Promise(res => setTimeout(res, 1500));
     }
     return false;
@@ -3675,13 +3682,13 @@ if (dpSettings && settingsPanel) {
       publishBtn.disabled = true;
 
       // Step 1: wake server if sleeping
-      label.textContent = 'Waking...';
-      const alive = await wakeServer();
+      label.textContent = 'Waking... 0s';
+      const alive = await wakeServer(90000, label);
       if (!alive) {
         publishBtn.classList.remove('publishing');
         publishBtn.disabled = false;
         label.textContent = 'Server offline';
-        setTimeout(() => { label.textContent = 'Publish'; }, 3000);
+        setTimeout(() => { label.textContent = 'Publish'; }, 4000);
         return;
       }
 

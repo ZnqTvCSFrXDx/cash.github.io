@@ -154,6 +154,16 @@ async function persistState(state) {
 
 loadState();
 
+// ── Self-ping keep-alive — prevents Render free tier spin-down ──
+// Pings itself every 4 min so the server stays warm even with no
+// open visitor tabs. Without this, Render sleeps after ~15 min of
+// no external traffic and the next Publish hits a cold start.
+setInterval(() => {
+  http.get(`http://localhost:${PORT}/ping`, (r) => {
+    r.resume(); // drain the response so the socket closes cleanly
+  }).on('error', () => {}); // silently ignore if server isn't ready yet
+}, 4 * 60 * 1000).unref();
+
 // ── FIX #1: Hardcoded AI system prompt ──────────────────────────
 // Moved fully server-side — client only sends the user message.
 // The prompt is built dynamically from current adminState so
