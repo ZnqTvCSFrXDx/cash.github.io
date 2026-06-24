@@ -3128,6 +3128,7 @@ const adminPrompt = document.getElementById('admin-prompt');
       });
     } catch (e) { /* silent — token expires on its own anyway */ }
     adminToken = null;
+    _storedPass = null;
   }
 const adminPassword = document.getElementById('admin-password');
 const adminConfirm = document.getElementById('admin-confirm');
@@ -3144,6 +3145,7 @@ const adminError = document.getElementById('admin-error');
 // and XSS can't read it out of storage.
 let adminToken = null;
 let adminUnlocked = false;
+let _storedPass = null; // kept in memory only — for silent re-auth on session expiry
 
 if (dpSettings && settingsPanel) {
   dpSettings.addEventListener('click', (e) => {
@@ -3182,6 +3184,7 @@ if (dpSettings && settingsPanel) {
       if (!r.ok) throw new Error(`Server returned ${r.status}`);
       const data = await r.json();
       adminToken = data.token;
+      _storedPass = pw; // keep for silent re-auth if server restarts
       // SECURITY: token stays in memory only — not written to sessionStorage
       adminUnlocked = true;
       adminPrompt.classList.remove('open');
@@ -3609,8 +3612,9 @@ if (dpSettings && settingsPanel) {
     return false;
   }
 
-  // Check if current token is still valid; if not, re-authenticate silently
-  // using a stored password (kept in memory only for the session).
+  // Check if current token is still valid. If not, silently re-login using
+  // the stored password (set at login time, memory-only). Falls back to
+  // showing the prompt only if no stored password is available.
   // Returns true if we have a valid token after the call.
   async function validateOrRefreshToken(labelEl) {
     if (!adminToken) return false;
@@ -3623,18 +3627,33 @@ if (dpSettings && settingsPanel) {
       if (r.ok) return true; // token still valid
     } catch(_) {}
 
-    // Token is expired/invalid (server restarted). Re-prompt the admin.
-    // Close the settings panel and show the password prompt again.
+    // Token expired/invalid (server restarted).
+    // Attempt silent re-login using stored password.
+    if (_storedPass) {
+      if (labelEl) labelEl.textContent = 'Re-authenticating...';
+      try {
+        const r = await fetch(`${RENDER_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: _storedPass })
+        });
+        if (r.ok) {
+          const data = await r.json();
+          adminToken = data.token;
+          return true; // new token ready — publish continues automatically
+        }
+      } catch(_) {}
+    }
+
+    // Silent re-auth failed or no stored password — fall back to prompt.
     if (labelEl) labelEl.textContent = 'Session expired';
     publishBtn.classList.remove('publishing');
     publishBtn.disabled = false;
 
-    // Reset auth state so clicking the settings gear re-shows the prompt
     adminToken = null;
     adminUnlocked = false;
     settingsPanel.classList.remove('open');
 
-    // Give the user a moment to read the label, then show the prompt
     setTimeout(() => {
       adminPrompt.classList.add('open');
       adminPassword.value = '';
@@ -3667,7 +3686,37 @@ if (dpSettings && settingsPanel) {
       const tokenOk = await validateOrRefreshToken(label);
       if (!tokenOk) return; // validateOrRefreshToken already handled UI reset
 
-      // Step 3: broadcast reload
+      // Step 3: persist current state to server BEFORE broadcasting reload.
+      // This ensures visitors get the latest settings even if Render restarted
+      // and lost the in-memory adminState since the last toggle/save.
+      label.textContent = 'Saving...';
+      try {
+        const stateSnapshot = {
+          showEmail:    toggleEmail ? toggleEmail.checked : true,
+          displayName:  document.getElementById('contact-name-input')?.value?.trim() || '',
+          contactEmail: document.getElementById('contact-email-input')?.value?.trim() || '',
+          status:       statusSelect ? statusSelect.value : 'available',
+          socials:      getCurrentSocialsState()
+        };
+        const sr = await fetch(`${RENDER_URL}/state`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`
+          },
+          body: JSON.stringify({ state: stateSnapshot })
+        });
+        if (!sr.ok) throw new Error('State save failed: ' + sr.status);
+      } catch(e) {
+        console.error('Publish state save error:', e);
+        publishBtn.classList.remove('publishing');
+        label.textContent = 'Save failed';
+        setTimeout(() => { label.textContent = 'Publish'; }, 2500);
+        publishBtn.disabled = false;
+        return;
+      }
+
+      // Step 4: broadcast reload to all open visitor tabs
       label.textContent = 'Publishing...';
       try {
         const res = await fetch(`${RENDER_URL}/reload`, {
