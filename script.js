@@ -602,10 +602,6 @@ fadeGroups.forEach(group => {
   };
 
 
-
-
-
-
   function mergeInto(targetEl, clearRef) {
     const r  = targetEl.getBoundingClientRect();
     const cx = r.left + r.width  / 2;
@@ -1118,22 +1114,6 @@ fadeGroups.forEach(group => {
       ctx.fill();
     }
   };
-
-  let glitchTicks = 0, slices = [];
-  let chromaX = 0, chromaY = 0, chromaLife = 0;
-  let scaleHit = 1, helloX = 0, helloY = 0, rolesX = 0, rolesY = 0;
-  let memojiShakeX = 0, memojiShakeY = 0;
-
-  function makeSlices() {
-    slices = [];
-    const count = Math.floor(Math.random() * 4) + 3;
-    let y = 0;
-    for (let i = 0; i < count; i++) {
-      const h = Math.random() * 28 + 8;
-      slices.push({ y, h, off: (Math.random() - 0.5) * 44 });
-      y += h;
-    }
-  }
 
   // ── smooth cubic ease (in-out quad) ──────────────
   function easeInOutQuad(t) {
@@ -2280,7 +2260,7 @@ document.querySelectorAll('.nav-links a, .nav-logo, a[href^="#"]').forEach(el =>
   const mo = new MutationObserver((mutations) => {
     mutations.forEach(m => {
       m.addedNodes.forEach(node => {
-        if (node.classList && node.classList.contains('ai-msg--bot')) {
+        if (node.classList && node.classList.contains('ai-msg-row--bot')) {
           if (window._audio) window._audio.terminalReceive();
         }
       });
@@ -2293,7 +2273,6 @@ document.querySelectorAll('.nav-links a, .nav-logo, a[href^="#"]').forEach(el =>
 (() => {
   const memoji   = document.getElementById('memoji');
   const mHead    = document.getElementById('m-head');
-  const mEyes    = document.getElementById('m-eyes');
   const mLids    = document.querySelectorAll('.m-lid');
   if (!memoji || !mHead) return;
 
@@ -3149,7 +3128,6 @@ document.addEventListener('DOMContentLoaded', () => {
 const dpSettings = document.getElementById('dp-settings');
 const settingsPanel = document.getElementById('settings-panel');
 const settingsClose = document.getElementById('settings-close');
-const toggleSocials = document.getElementById('toggle-socials');
 const adminPrompt = document.getElementById('admin-prompt');
 
   // FIX #5: logout helper — tells server to invalidate token immediately
