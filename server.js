@@ -276,39 +276,42 @@ Tone: be confident but approachable. Keep every reply short, simple, and direct 
 // ── Live-sync (SSE) ─────────────────────────────────────────────
 const sseClients = new Set();
 
-// ── CORS helpers ────────────────────────────────────────────────
-function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+// ── CORS helpers ─────────────────────────────────────────────────
+// Node's writeHead() replaces ALL previously set headers when you pass a
+// headers object — so setHeader() calls made before writeHead() are silently
+// discarded. To guarantee CORS headers survive, we always pass them directly
+// into writeHead / res.end, never relying on setHeader() to persist.
+
+// Returns the correct ACAO header value for a given request.
+// Restricted routes (login, state, reload…) only allow ALLOWED_ORIGIN.
+// Public routes (AI proxy, ping, events) allow *.
+function corsOrigin(req, strict) {
+  if (!strict) return '*';
+  const origin = req.headers['origin'] || '';
+  // Reflect origin if it matches — required for credentialed requests.
+  // If origin is missing/wrong, fall back to the allowed origin so
+  // the preflight still passes (the auth token guards actual writes).
+  return origin === ALLOWED_ORIGIN ? origin : ALLOWED_ORIGIN;
 }
 
-function setStrictCors(req, res) {
-  const origin = req.headers.origin;
-  // Always reflect the allowed origin — if the origin matches, reflect it;
-  // if missing/different (e.g. Render proxy strips it), still send the header
-  // so the browser preflight passes. Auth tokens still gate actual writes.
-  res.setHeader('Access-Control-Allow-Origin', origin === ALLOWED_ORIGIN ? origin : ALLOWED_ORIGIN);
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-}
-
-function json(res, status, data) {
-  // Repeat CORS headers inside writeHead — calling writeHead() wipes any
-  // headers set via setHeader() before it, so we must bundle them here.
-  const origin = res.getHeader('Access-Control-Allow-Origin') || '*';
-  res.writeHead(status, {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': origin,
+// Base CORS headers shared by every response.
+function corsHeaders(origin, credentials) {
+  const h = {
+    'Access-Control-Allow-Origin':  origin,
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  };
+  if (credentials) h['Access-Control-Allow-Credentials'] = 'true';
+  return h;
+}
+
+// Send a JSON response, always bundling the correct CORS headers.
+// req is passed so we can compute the right origin for restricted routes.
+function json(res, status, data, req, strict) {
+  const origin = corsOrigin(req, strict);
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    ...corsHeaders(origin, strict),
   });
   res.end(JSON.stringify(data));
 }
@@ -348,19 +351,19 @@ function handleSSE(req, res) {
 // FIX #1 + #4: /state GET now requires STATE_READ_KEY,
 // and is rate limited so it can't be hammered.
 async function handleGetState(req, res) {
-  // FIX #4: rate limit — 30 reads per minute per IP
+  // rate limit — 30 reads per minute per IP
   if (rateLimited(req, 'state-read', 30, 60 * 1000)) {
-    json(res, 429, { error: 'Too many requests' });
+    json(res, 429, { error: 'Too many requests' }, req, true);
     return;
   }
 
-  // FIX #1: require read key — blocks random strangers
+  // require read key — blocks random strangers
   const token = extractBearerToken(req);
   const isAdmin = isValidSession(token);
   const isReader = STATE_READ_KEY && token === STATE_READ_KEY;
 
   if (!isAdmin && !isReader) {
-    json(res, 401, { error: 'Unauthorized' });
+    json(res, 401, { error: 'Unauthorized' }, req, true);
     return;
   }
 
@@ -376,48 +379,48 @@ async function handleGetState(req, res) {
   } catch (e) {
     console.warn('Redis read failed on /state, using cached:', e.message);
   }
-  json(res, 200, adminState);
+  json(res, 200, adminState, req, true);
 }
 
 async function handleLogin(req, parsed, res) {
   if (rateLimited(req, 'login', 8, 5 * 60 * 1000)) {
-    json(res, 429, { error: 'Too many attempts, try again later' });
+    json(res, 429, { error: 'Too many attempts, try again later' }, req, true);
     return;
   }
   const sent = (parsed.password || '').trim();
   if (sent !== ADMIN_PASS) {
     console.warn(`Login failed — sent length ${sent.length}, expected length ${ADMIN_PASS.length}`);
-    setTimeout(() => json(res, 403, { error: 'Unauthorized' }), 300);
+    setTimeout(() => json(res, 403, { error: 'Unauthorized' }, req, true), 300);
     return;
   }
   const token = createSession();
-  json(res, 200, { token, expiresIn: SESSION_TTL_MS });
+  json(res, 200, { token, expiresIn: SESSION_TTL_MS }, req, true);
 }
 
 // FIX #5: /logout — invalidates the session token immediately
 async function handleLogout(req, parsed, res) {
   const token = extractBearerToken(req) || parsed.token;
   if (token) sessions.delete(token);
-  json(res, 200, { ok: true });
+  json(res, 200, { ok: true }, req, true);
 }
 
 async function handleReload(req, parsed, res) {
   const token = extractBearerToken(req) || parsed.token;
   if (!isValidSession(token)) {
-    return json(res, 403, { error: 'Unauthorized' });
+    return json(res, 403, { error: 'Unauthorized' }, req, true);
   }
   const senderId = parsed.sessionId || '';
   sseClients.forEach(client =>
     client.write(`event: reload\ndata: ${JSON.stringify({ from: senderId })}\n\n`)
   );
   console.log(`Reload broadcast to ${sseClients.size} client(s)`);
-  json(res, 200, { ok: true, clients: sseClients.size });
+  json(res, 200, { ok: true, clients: sseClients.size }, req, true);
 }
 
 async function handleSetState(req, parsed, res) {
   const token = extractBearerToken(req) || parsed.token;
   if (!isValidSession(token)) {
-    json(res, 403, { error: 'Unauthorized' });
+    json(res, 403, { error: 'Unauthorized' }, req, true);
     return;
   }
   const patch = parsed.state || {};
@@ -436,22 +439,22 @@ async function handleSetState(req, parsed, res) {
   };
   await persistState(adminState);
   console.log('State updated + persisted:', adminState);
-  json(res, 200, { ok: true });
+  json(res, 200, { ok: true }, req, true);
 }
 
 // FIX #1: system prompt is now built server-side from adminState.
 // Client only sends { messages: [...] } — no system field accepted.
 async function handleAI(req, parsed, res) {
   if (rateLimited(req, 'ai', 20, 60 * 1000)) {
-    json(res, 429, { error: 'Slow down — too many requests' });
+    json(res, 429, { error: 'Slow down — too many requests' }, req, false);
     return;
   }
   if (!parsed.messages || !Array.isArray(parsed.messages)) {
-    json(res, 400, { error: 'Missing messages array' });
+    json(res, 400, { error: 'Missing messages array' }, req, false);
     return;
   }
   if (parsed.messages.length > 30 || JSON.stringify(parsed.messages).length > 12000) {
-    json(res, 400, { error: 'Message payload too large' });
+    json(res, 400, { error: 'Message payload too large' }, req, false);
     return;
   }
 
@@ -480,13 +483,13 @@ async function handleAI(req, parsed, res) {
     r.on('end', () => {
       try {
         const reply = JSON.parse(data).choices?.[0]?.message?.content || 'No response.';
-        json(res, 200, { content: [{ text: reply }] });
+        json(res, 200, { content: [{ text: reply }] }, req, false);
       } catch (e) {
-        json(res, 500, { error: 'Parse error' });
+        json(res, 500, { error: 'Parse error' }, req, false);
       }
     });
   });
-  proxy.on('error', err => json(res, 500, { error: err.message }));
+  proxy.on('error', err => json(res, 500, { error: err.message }, req, false));
   proxy.write(payload);
   proxy.end();
 }
@@ -496,41 +499,42 @@ const RESTRICTED_ROUTES = new Set(['/login', '/logout', '/reload', '/state', '/'
 const MAX_BODY_BYTES     = 50 * 1024;
 
 http.createServer((req, res) => {
-  // Always apply CORS headers first — OPTIONS preflight must get them
-  // regardless of route. Restricted POST routes get strict (Vercel-only)
-  // origin; everything else gets wildcard.
-  const isRestrictedPost = RESTRICTED_ROUTES.has(req.url) && req.method !== 'GET';
-  if (isRestrictedPost || req.method === 'OPTIONS') {
-    setStrictCors(req, res);
-  } else {
-    setCors(res);
-  }
+  const strict = RESTRICTED_ROUTES.has(req.url);
 
+  // ── OPTIONS preflight ──────────────────────────────────────────
+  // MUST bundle CORS headers directly into writeHead — setHeader()
+  // calls are wiped when writeHead() is called later or here.
   if (req.method === 'OPTIONS') {
-    res.writeHead(204);
+    const origin = corsOrigin(req, strict);
+    res.writeHead(204, {
+      ...corsHeaders(origin, strict),
+      'Vary': 'Origin',
+    });
     res.end();
     return;
   }
 
-  // GET routes
+  // ── GET routes ─────────────────────────────────────────────────
   if (req.method === 'GET') {
     if (req.url === '/ping')   return handlePing(req, res);
     if (req.url === '/events') return handleSSE(req, res);
     if (req.url === '/state')  return handleGetState(req, res);
-    // FIX #6: unknown GETs return 404 instead of 200
-    json(res, 404, { error: 'Not found' });
+    json(res, 404, { error: 'Not found' }, req, false);
     return;
   }
 
-  // POST routes
+  // ── POST routes ────────────────────────────────────────────────
   if (req.method === 'POST') {
     let body     = '';
     let tooLarge = false;
+    const origin = corsOrigin(req, strict);
+    const ch     = corsHeaders(origin, strict);
+
     req.on('data', d => {
       body += d;
       if (body.length > MAX_BODY_BYTES) {
         tooLarge = true;
-        res.writeHead(413, { 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(413, { 'Content-Type': 'text/plain', ...ch });
         res.end('Payload too large');
         req.destroy();
       }
@@ -541,7 +545,7 @@ http.createServer((req, res) => {
       try {
         parsed = body ? JSON.parse(body) : {};
       } catch (e) {
-        res.writeHead(400, { 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(400, { 'Content-Type': 'text/plain', ...ch });
         res.end('Bad JSON');
         return;
       }
@@ -554,12 +558,13 @@ http.createServer((req, res) => {
       if (req.url === '/state')  return handleSetState(req, parsed, res);
       if (req.url === '/')       return handleAI(req, parsed, res);
 
-      json(res, 404, { error: 'Not found' });
+      json(res, 404, { error: 'Not found' }, req, false);
     });
     return;
   }
 
-  res.writeHead(405, { 'Access-Control-Allow-Origin': '*' });
+  const origin = corsOrigin(req, false);
+  res.writeHead(405, { 'Content-Type': 'text/plain', ...corsHeaders(origin, false) });
   res.end('Method Not Allowed');
 
 }).listen(PORT, () => console.log(`Proxy running on :${PORT}`));
