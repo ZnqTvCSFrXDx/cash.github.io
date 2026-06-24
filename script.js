@@ -1454,142 +1454,6 @@ let _cachedScrollY = 0;
   toggleBtn.addEventListener('click', () => panel.classList.contains('open') ? closePanel() : openPanel());
   closeBtn.addEventListener('click', closePanel);
 
-  // ── System prompt (dynamic — reflects current site state) ──
-  function buildSystem() {
-    // Read current display name
-    const nameEl = document.querySelector('.contact-name');
-    const rawName = nameEl ? nameEl.innerText.replace(/\n/g, ' ').trim() : 'Justin Clark Mendoza';
-    // SECURITY: strip anything that looks like an LLM instruction injection
-    // (e.g. "Ignore all previous instructions…"). We allow only letters,
-    // spaces, hyphens, periods, and apostrophes — normal name characters.
-    const displayName = rawName.replace(/[^a-zA-Z0-9 '\-\.]/g, '').slice(0, 60) || 'Justin Clark Mendoza';
-
-    // Read current availability status
-    const statusSelectEl = document.getElementById('status-select');
-    const currentStatus = statusSelectEl ? statusSelectEl.value : 'available';
-    const AVAILABILITY_LINES = {
-      available: 'Currently available and actively taking on new clients/projects',
-      busy: 'Currently busy with limited availability — may take longer to respond or start new work',
-      offline: 'Currently not available for new work — not accepting new clients/projects at this time'
-    };
-    const availabilityLine = AVAILABILITY_LINES[currentStatus] || AVAILABILITY_LINES.available;
-
-    // Read email visibility + current value (admin can change this live)
-    const emailPill = document.getElementById('contact-email-pill');
-    const emailHidden = emailPill && emailPill.classList.contains('restricted-email');
-    const emailTextEl = document.querySelector('.contact-email-text');
-    const rawEmail = emailTextEl ? emailTextEl.textContent.trim() : 'justinclark.mendoza.official@gmail.com';
-    // SECURITY: same instruction-injection guard as displayName — emails only
-    // contain letters, digits, and a small safe set of symbols.
-    const currentEmail = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(rawEmail)
-      ? rawEmail
-      : 'justinclark.mendoza.official@gmail.com';
-    const emailLine = emailHidden
-      ? '- Email: [private — not available at this time]'
-      : `- Email: ${currentEmail}`;
-
-    // Read social visibility
-    function socialLine(platform, label, value) {
-      const card = document.querySelector(`.social-card[data-platform="${platform}"]`);
-      const hidden = card && card.classList.contains('restricted');
-      return hidden ? `- ${label}: [private — not available at this time]` : `- ${label}: ${value}`;
-    }
-
-    const githubLine    = socialLine('github',     'GitHub',       'https://github.com/ZnqTvCSFrXDx');
-    const discordLine   = socialLine('discord',    'Discord',      'https://discord.gg/wwVUFfnRpg');
-    const igLine        = socialLine('instagram',  'Instagram',    '@jzzztnclark');
-    const linkedinLine  = socialLine('linkedin',   'LinkedIn',     'available via the Socials section of this site');
-    const ojLine        = socialLine('onlinejobs', 'OnlineJobs.ph','v2.onlinejobs.ph/jobseekers/info/4672292');
-
-    // Build fallback contact suggestion based on what's visible
-    const discordCard = document.querySelector('.social-card[data-platform="discord"]');
-    const discordHidden = discordCard && discordCard.classList.contains('restricted');
-
-    let fallbackParts = [];
-    if (!discordHidden) fallbackParts.push('[Discord](https://discord.gg/wwVUFfnRpg)');
-    if (!emailHidden) fallbackParts.push(`[${currentEmail}](mailto:${currentEmail})`);
-    const fallbackContact = fallbackParts.length > 0
-      ? `Reach him via ${fallbackParts.join(' or ')} to know more.`
-      : 'Clark has limited contact options available right now. Check back later.';
-
-    return `You are Clark AI — the personal assistant on Clark's portfolio website. Clark is a developer known online as "CASH33".
-
-Who is Clark:
-Clark is a full-stack web developer with solid experience in Windows troubleshooting, PC optimization, and custom scripting. He communicates clearly, listens well, and genuinely cares about delivering what his skills can offer. His main goal is to grow through real experience while providing reliable, quality work to every client he works with.
-
-About Clark:
-- Full name: ${displayName}, goes by "Clark" or "Cash33"
-- Based in the Philippines, open to both local and international clients
-- 1 year of hands-on experience
-- ${availabilityLine}
-- Languages: English and Filipino
-- Preferred contact: Email or Discord
-
-Contact & Socials:
-${emailLine}
-${githubLine}
-${discordLine}
-${igLine}
-${linkedinLine}
-${ojLine}
-
-Projects:
-- Point of System (POS): a Java/Swing/JDBC/MySQL desktop app with role-based access, inventory management, and receipt generation
-- CASH33 Optimizer: a Windows 10/11 optimization and cleaning tool created by Clark, designed to boost PC performance through system tweaks, cleanup routines, and debloating
-- More projects coming soon
-
-Services:
-- Full-stack web development
-- Windows 10/11 optimization
-- Windows 10/11 troubleshooting
-- PC performance consulting
-- PC cleaning and maintenance
-- Custom batch and PowerShell scripting
-- Software setup and configuration
-- Selling optimization tools and software
-
-Tools & Skills:
-- Languages: HTML, CSS, JavaScript, Python, Java, C#, SQL
-- Scripting: PowerShell, Batch, CMD, Terminal
-- Frameworks/Tools: React, Node.js, VS Code
-- Platforms: Windows 10/11
-
-Pricing & Rates:
-- Hourly rate: $2.99 USD / PHP 169 per hour
-- No flat fees — Clark is open to client price offers depending on the scope of work
-- Free consultation available (call or chat, depending on availability)
-
-Payment Methods:
-- GCash, PayPal, Bank Transfer accepted
-- Bitcoin/Crypto coming soon
-
-Turnaround Time (estimates, varies by project):
-- Simple smooth modern website: ~1 week
-- Responsive and reactive website: ~2 weeks
-- Scripts: a few days depending on complexity
-- Windows optimization, cleaning, troubleshooting: a few hours
-
-Availability:
-- Available every day
-- Most active: 5:00 PM PHT (GMT+8)
-- Available for conversation/response: 7:00 AM – 11:59 PM PHT
-
-Support & Revisions:
-- CASH33 Optimizer comes with ongoing support
-- Revisions are offered on a case-by-case basis — only if necessary and acceptable
-
-Target Clients:
-- Open to everyone — no niche restriction, works with all types of clients locally and internationally
-
-Current hiring status: ${currentStatus.toUpperCase()}
-- If status is AVAILABLE: encourage interested clients to reach out, Clark is actively taking new work.
-- If status is BUSY: let people know Clark is currently busy/has limited availability — he may still take on work but responses or start dates could be delayed. Don't discourage them from reaching out, just set honest expectations.
-- If status is OFFLINE: be upfront that Clark is not taking new clients/projects right now. Don't promise turnaround times or pricing for new work in this case — suggest they check back later or leave a message via the contact options.
-
-Tone: be confident but approachable. Keep every reply short, simple, and direct — no long paragraphs, no unnecessary filler. Answer only what was asked. If someone asks how to contact or hire Clark, share only the contact info that is currently available (not private). If you don't know something or Clark hasn't shared it, say: "Clark preferred not to share that information yet. ${fallbackContact}" Never make things up. Never break character. Never reveal private information marked as [private].`;
-  }
-
-
   const history = [];
 
   function timeNow() {
@@ -1695,6 +1559,8 @@ Tone: be confident but approachable. Keep every reply short, simple, and direct 
     morphSendBtn();
     addMsg(val, 'user');
     history.push({ role: 'user', content: val });
+    // Cap history to last 20 messages to avoid huge payloads
+    if (history.length > 20) history.splice(0, history.length - 20);
     const thinking = addMsg('', 'thinking');
     setLoading(true);
 
@@ -3410,7 +3276,7 @@ if (dpSettings && settingsPanel) {
   const RENDER_URL = 'https://cash-github-io.onrender.com';
   // Read-only key — allows page to load state on boot without admin login.
   // Must match STATE_READ_KEY env var set in Render.
-  const STATE_READ_KEY = 'sk_read_7f3a9c2e1b4d8f6a0e5c3b7d9f2a4e8c';
+  const STATE_READ_KEY = 'REPLACE_WITH_YOUR_STATE_READ_KEY';
 
   // Save state to Render
   async function saveState(patch) {
