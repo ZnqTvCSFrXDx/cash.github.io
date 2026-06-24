@@ -325,7 +325,12 @@ function extractBearerToken(req) {
 // ── Route handlers ───────────────────────────────────────────────
 
 function handlePing(req, res) {
-  res.writeHead(200);
+  // /ping is called cross-origin by the frontend wakeServer() — must include CORS headers.
+  res.writeHead(200, {
+    'Content-Type': 'text/plain',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  });
   res.end('pong');
 }
 
