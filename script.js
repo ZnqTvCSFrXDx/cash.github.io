@@ -3128,7 +3128,9 @@ const adminPrompt = document.getElementById('admin-prompt');
       });
     } catch (e) { /* silent — token expires on its own anyway */ }
     adminToken = null;
-    _storedPass = null;
+    // NOTE: _storedPass is intentionally kept — needed for silent re-auth
+    // if the server restarts. It is only cleared when the admin explicitly
+    // cancels / the page is reloaded.
   }
 const adminPassword = document.getElementById('admin-password');
 const adminConfirm = document.getElementById('admin-confirm');
@@ -3206,6 +3208,8 @@ if (dpSettings && settingsPanel) {
 
   adminCancel.addEventListener('click', () => {
     adminPrompt.classList.remove('open');
+    _storedPass = null; // explicit cancel = clear stored password
+    adminUnlocked = false;
   });
 
   // ── Settings panel cursor merge (pink glow) ──
