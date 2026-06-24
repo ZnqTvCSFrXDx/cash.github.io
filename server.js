@@ -31,7 +31,7 @@ async function redisGet(key) {
 // body, so state was never actually persisted (silent failure).
 async function redisSet(key, value) {
   const serialized = JSON.stringify(value);
-  await fetch(`${UPSTASH_URL}/set/${key}`, {
+  const res = await fetch(`${UPSTASH_URL}/set/${key}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${UPSTASH_TOKEN}`,
@@ -39,6 +39,10 @@ async function redisSet(key, value) {
     },
     body: serialized
   });
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error('Upstash write failed: ' + JSON.stringify(data));
+  }
 }
 
 // ── Config ──────────────────────────────────────────────────────
@@ -145,11 +149,7 @@ async function loadState() {
 }
 
 async function persistState(state) {
-  try {
-    await redisSet(STATE_KEY, state);
-  } catch (e) {
-    console.warn('Failed to persist state to Upstash:', e.message);
-  }
+  await redisSet(STATE_KEY, state); // throws on failure — caller must handle
 }
 
 loadState();
@@ -458,13 +458,22 @@ async function handleSetState(req, parsed, res) {
     patch.contactEmail = patch.contactEmail.replace(/[<>]/g, '').slice(0, 100);
   }
 
-  adminState = {
+  const newState = {
     ...adminState,
     ...patch,
     socials: { ...adminState.socials, ...(patch.socials || {}) }
   };
-  await persistState(adminState);
-  console.log('State updated + persisted');
+
+  try {
+    await persistState(newState);
+  } catch (e) {
+    console.error('persistState failed:', e.message);
+    json(res, 500, { error: 'Failed to save state: ' + e.message }, req, true);
+    return;
+  }
+
+  adminState = newState; // only update in-memory state after confirmed Redis write
+  console.log('State saved to Redis OK');
   json(res, 200, { ok: true }, req, true);
 }
 
@@ -505,17 +514,8 @@ async function handleAI(req, parsed, res) {
 
   const proxy = https.request(options, r => {
     let data = '';
-    let tooBig = false;
-    r.on('data', d => {
-      data += d;
-      if (data.length > 200 * 1024) { // 200KB cap — Groq replies are never this big
-        tooBig = true;
-        r.destroy();
-        json(res, 500, { error: 'Response too large' }, req, false);
-      }
-    });
+    r.on('data', d => data += d);
     r.on('end', () => {
-      if (tooBig) return;
       try {
         const reply = JSON.parse(data).choices?.[0]?.message?.content || 'No response.';
         json(res, 200, { content: [{ text: reply }] }, req, false);
