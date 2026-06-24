@@ -1020,8 +1020,9 @@ fadeGroups.forEach(group => {
     gridDirty = false;
     for (const d of dots) {
       const dx = tmx - d.x, dy = tmy - d.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      d.target = d.base + Math.max(0, 1 - dist / 160) * 0.7;
+      const distSq = dx * dx + dy * dy;
+      // Use squared threshold (160^2 = 25600) — avoids sqrt
+      d.target = d.base + Math.max(0, 1 - distSq / 25600) * 0.7;
     }
   }
 
@@ -1176,7 +1177,12 @@ fadeGroups.forEach(group => {
     const cy = (Math.random() - 0.5) * 10;
     let ticks = Math.floor(Math.random() * 5) + 3;
     let chromaLife = 1.0;
-    const iv = setInterval(() => {
+    let lastT = 0;
+    const INTERVAL = 40;
+
+    function glitchFrame(ts) {
+      if (ts - lastT < INTERVAL) { requestAnimationFrame(glitchFrame); return; }
+      lastT = ts;
       chromaLife *= 0.75; ticks--;
       glitchR.style.opacity = (chromaLife * 0.85).toString();
       glitchR.style.transform = `translate(${cx * chromaLife * 1.6}px, ${cy * -chromaLife}px)`;
@@ -1185,13 +1191,15 @@ fadeGroups.forEach(group => {
       glitchB.style.transform = `translate(${cx * -chromaLife}px, ${cy * chromaLife * 0.8}px)`;
       glitchB.style.clipPath = `inset(${Math.random()*40}% 0 ${Math.random()*20}% 0)`;
       glitchMain.style.transform = `translateX(${(Math.random()-0.5) * 8 * chromaLife}px)`;
-      if (ticks <= 0) {
-        clearInterval(iv);
+      if (ticks > 0) {
+        requestAnimationFrame(glitchFrame);
+      } else {
         glitchR.style.opacity = glitchB.style.opacity = '0';
         glitchMain.style.transform = '';
+        setTimeout(idleGlitch, Math.random() * 2000 + 3000);
       }
-    }, 40);
-    setTimeout(idleGlitch, Math.random() * 2000 + 3000);
+    }
+    requestAnimationFrame(glitchFrame);
   }
   setTimeout(idleGlitch, 2500);
 })();

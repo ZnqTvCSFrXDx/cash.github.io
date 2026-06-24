@@ -17,7 +17,6 @@
 }
 
 html { scroll-behavior: smooth; overflow-x: clip; }
-* { scroll-behavior: smooth; }
 
 /* Hide main page scrollbar (page-nav capsule replaces it) */
 html {
@@ -59,6 +58,8 @@ nav {
   gap: 24px;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.4);
   transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+  will-change: transform;
+  contain: layout style;
 }
 
 nav > * { position: relative; z-index: 1; }
@@ -95,7 +96,7 @@ nav > * { position: relative; z-index: 1; }
   position: relative;
   background: transparent;
   border: none;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .nav-links a:hover, .nav-logo:hover {
@@ -392,7 +393,6 @@ body.theme-light .ai-input { color: #1a0a3a; }
 body.theme-light #bg-canvas {
   will-change: transform;
   transform: translateZ(0); opacity: 0.35; }
-
 /* ── Right page indicator (capsule scroll fill) ──── */
 .page-nav {
   position: fixed;
@@ -561,10 +561,10 @@ body.theme-light #bg-canvas {
 
 .memoji > svg { height: auto; display: block; }
 
-.m-head   { transition: transform 0.25s cubic-bezier(.22,1,.36,1); transform-origin: 200px 260px; }
+.m-head   { transform-origin: 200px 260px; }
 .m-eyes,
-.m-pupils { transition: transform 0.12s ease-out; }
-.m-brows  { transition: transform 0.2s ease-out; }
+.m-pupils { }
+.m-brows  { }
 .m-lid    { transition: height 0.08s ease; }
 
 #m-orbits { animation: orbitGlow 4s ease-in-out infinite; }
@@ -1903,9 +1903,11 @@ body.theme-light #bg-canvas {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
-aside, section { position: relative; z-index: 1; }
+aside, section { position: relative; z-index: 1; contain: layout style; }
 
 /* ── Custom cursor ring ──────────────────────────── */
 #cursor-ring {
