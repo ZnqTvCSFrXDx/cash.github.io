@@ -26,13 +26,14 @@ async function redisGet(key) {
 
 // FIX #2: Use POST with JSON body so state is never logged in URLs
 async function redisSet(key, value) {
+  // Single JSON.stringify — value is an object, body expects a JSON string
   await fetch(`${UPSTASH_URL}/set/${key}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${UPSTASH_TOKEN}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(JSON.stringify(value))
+    body: JSON.stringify(value)
   });
 }
 
