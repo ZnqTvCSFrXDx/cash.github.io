@@ -301,7 +301,15 @@ function setStrictCors(req, res) {
 }
 
 function json(res, status, data) {
-  res.writeHead(status, { 'Content-Type': 'application/json' });
+  // Repeat CORS headers inside writeHead — calling writeHead() wipes any
+  // headers set via setHeader() before it, so we must bundle them here.
+  const origin = res.getHeader('Access-Control-Allow-Origin') || '*';
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  });
   res.end(JSON.stringify(data));
 }
 
@@ -322,7 +330,7 @@ const MAX_SSE_CLIENTS = 50;
 
 function handleSSE(req, res) {
   if (sseClients.size >= MAX_SSE_CLIENTS) {
-    res.writeHead(503, { 'Content-Type': 'text/plain' });
+    res.writeHead(503, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
     res.end('Too many open connections, try again later');
     return;
   }
@@ -396,9 +404,7 @@ async function handleLogout(req, parsed, res) {
 async function handleReload(req, parsed, res) {
   const token = extractBearerToken(req) || parsed.token;
   if (!isValidSession(token)) {
-    res.writeHead(403);
-    res.end();
-    return;
+    return json(res, 403, { error: 'Unauthorized' });
   }
   const senderId = parsed.sessionId || '';
   sseClients.forEach(client =>
@@ -524,7 +530,7 @@ http.createServer((req, res) => {
       body += d;
       if (body.length > MAX_BODY_BYTES) {
         tooLarge = true;
-        res.writeHead(413);
+        res.writeHead(413, { 'Access-Control-Allow-Origin': '*' });
         res.end('Payload too large');
         req.destroy();
       }
@@ -535,7 +541,7 @@ http.createServer((req, res) => {
       try {
         parsed = body ? JSON.parse(body) : {};
       } catch (e) {
-        res.writeHead(400);
+        res.writeHead(400, { 'Access-Control-Allow-Origin': '*' });
         res.end('Bad JSON');
         return;
       }
@@ -553,7 +559,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  res.writeHead(405);
+  res.writeHead(405, { 'Access-Control-Allow-Origin': '*' });
   res.end('Method Not Allowed');
 
 }).listen(PORT, () => console.log(`Proxy running on :${PORT}`));
