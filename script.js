@@ -3609,6 +3609,42 @@ if (dpSettings && settingsPanel) {
     return false;
   }
 
+  // Check if current token is still valid; if not, re-authenticate silently
+  // using a stored password (kept in memory only for the session).
+  // Returns true if we have a valid token after the call.
+  async function validateOrRefreshToken(labelEl) {
+    if (!adminToken) return false;
+
+    // Quick check: try /state with current token
+    try {
+      const r = await fetch(`${RENDER_URL}/state`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      if (r.ok) return true; // token still valid
+    } catch(_) {}
+
+    // Token is expired/invalid (server restarted). Re-prompt the admin.
+    // Close the settings panel and show the password prompt again.
+    if (labelEl) labelEl.textContent = 'Session expired';
+    publishBtn.classList.remove('publishing');
+    publishBtn.disabled = false;
+
+    // Reset auth state so clicking the settings gear re-shows the prompt
+    adminToken = null;
+    adminUnlocked = false;
+    settingsPanel.classList.remove('open');
+
+    // Give the user a moment to read the label, then show the prompt
+    setTimeout(() => {
+      adminPrompt.classList.add('open');
+      adminPassword.value = '';
+      adminError.textContent = 'Session expired — please log in again, then click Publish.';
+      setTimeout(() => adminPassword.focus(), 100);
+    }, 600);
+
+    return false;
+  }
+
   if (publishBtn) {
     publishBtn.addEventListener('click', async () => {
       const label = publishBtn.querySelector('.settings-publish-label');
@@ -3626,7 +3662,12 @@ if (dpSettings && settingsPanel) {
         return;
       }
 
-      // Step 2: broadcast reload
+      // Step 2: validate session token (server restart wipes in-memory sessions)
+      label.textContent = 'Checking session...';
+      const tokenOk = await validateOrRefreshToken(label);
+      if (!tokenOk) return; // validateOrRefreshToken already handled UI reset
+
+      // Step 3: broadcast reload
       label.textContent = 'Publishing...';
       try {
         const res = await fetch(`${RENDER_URL}/reload`, {
