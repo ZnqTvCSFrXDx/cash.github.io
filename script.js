@@ -3000,8 +3000,6 @@ document.querySelectorAll('.nav-links a, .nav-logo, a[href^="#"]').forEach(el =>
   }
 })();
 // ── Apply persisted state for ALL visitors on every page load ────
-// Wrapped in DOMContentLoaded — guarantees all DOM elements exist
-// before we query and update them.
 document.addEventListener('DOMContentLoaded', async function applyPersistedState() {
   const RENDER_URL      = 'https://cash-github-io.onrender.com';
   const STATE_READ_KEY  = 'sk_read_7f3a9c2e1b4d8f6a0e5c3b7d9f2a4e8c';
@@ -3166,19 +3164,12 @@ if (dpSettings && settingsPanel) {
   adminConfirm.addEventListener('click', async () => {
     const pw = adminPassword.value;
     adminConfirm.disabled = true;
-    adminError.textContent = '';
-
-    // Wake Render before attempting login — free tier sleeps after inactivity.
-    // Show status so user knows it's working, not frozen.
-    const prevError = adminError.textContent;
     adminError.style.color = '#a78bfa';
     adminError.textContent = 'Connecting to server...';
-    let woke = false;
-    try {
-      woke = await wakeServer(60000);
-    } catch(_) {}
+
+    const alive = await wakeServer(null, 60000);
     adminError.style.color = '';
-    if (!woke) {
+    if (!alive) {
       adminError.textContent = 'Server unreachable — try again in a moment.';
       adminConfirm.disabled = false;
       return;
@@ -3186,11 +3177,11 @@ if (dpSettings && settingsPanel) {
     adminError.textContent = '';
 
     try {
-      const r = await fetch(`${RENDER_URL}/login`, {
+      const r = await fetchWithTimeout(`${RENDER_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pw })
-      });
+      }, 8000);
       if (r.status === 429) {
         adminError.textContent = 'Too many attempts — wait a few minutes and try again.';
         adminPassword.value = '';
@@ -3314,8 +3305,7 @@ if (dpSettings && settingsPanel) {
     settingsClose.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsPanel.classList.remove('open');
-    // Session stays alive — no logout on close. Token expires naturally (1hr).
-    // This prevents needing to re-login every time you reopen the panel.
+    // Session stays alive — token expires naturally after 1hr.
   });
 
   document.addEventListener('click', (e) => {
@@ -3623,45 +3613,53 @@ if (dpSettings && settingsPanel) {
   // ── Publish button ──
   const publishBtn = document.getElementById('settings-publish');
 
-  async function wakeServer(timeout = 90000, labelEl = null) {
+  // Fetch with a hard timeout — prevents indefinite hangs on slow/sleeping Render.
+  async function fetchWithTimeout(url, options = {}, ms = 8000) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms);
+    try {
+      return await fetch(url, { ...options, signal: ctrl.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // Pings /ping until server responds, showing elapsed seconds in labelEl.
+  async function wakeServer(labelEl = null, timeout = 90000) {
     const start = Date.now();
     while (Date.now() - start < timeout) {
       try {
-        const r = await fetch(`${RENDER_URL}/ping`, { cache: 'no-store' });
+        const r = await fetchWithTimeout(`${RENDER_URL}/ping`, { cache: 'no-store' }, 5000);
         if (r.ok) return true;
       } catch(_) {}
       const elapsed = Math.round((Date.now() - start) / 1000);
       if (labelEl) labelEl.textContent = `Waking... ${elapsed}s`;
-      await new Promise(res => setTimeout(res, 1500));
+      await new Promise(r => setTimeout(r, 1500));
     }
     return false;
   }
 
-  // Ensures we have a valid session token before publish.
-  // 1. If token exists, verify it's still accepted by the server.
-  // 2. If invalid/expired, silently re-login using stored password.
-  // 3. If that fails too, show the login prompt.
-  // Returns true if a valid token is ready.
-  async function validateOrRefreshToken(labelEl) {
-    // Step 1: if we have a token, quick-check it
+  // Ensures a valid session exists before publish.
+  // Returns true if ready, false if the login prompt was shown.
+  async function ensureSession(labelEl) {
+    // 1. Try current token (fast path — 8s timeout)
     if (adminToken) {
       try {
-        const r = await fetch(`${RENDER_URL}/state`, {
-          headers: { Authorization: `Bearer ${adminToken}` }
-        });
-        if (r.ok) return true; // still valid
+        const r = await fetchWithTimeout(`${RENDER_URL}/state`,
+          { headers: { Authorization: `Bearer ${adminToken}` } }, 8000);
+        if (r.ok) return true;
       } catch(_) {}
     }
 
-    // Step 2: token missing or rejected — try silent re-login
+    // 2. Silent re-login with stored password
     if (_storedPass) {
       if (labelEl) labelEl.textContent = 'Re-authenticating...';
       try {
-        const r = await fetch(`${RENDER_URL}/login`, {
+        const r = await fetchWithTimeout(`${RENDER_URL}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: _storedPass })
-        });
+        }, 8000);
         if (r.ok) {
           const data = await r.json();
           adminToken = data.token;
@@ -3671,20 +3669,29 @@ if (dpSettings && settingsPanel) {
       } catch(_) {}
     }
 
-    // Step 3: all failed — force re-login via prompt
-    if (labelEl) labelEl.textContent = 'Session expired';
-    publishBtn.classList.remove('publishing');
-    publishBtn.disabled = false;
-    adminToken = null;
-    adminUnlocked = false;
-    settingsPanel.classList.remove('open');
-    setTimeout(() => {
-      adminPrompt.classList.add('open');
-      adminPassword.value = '';
-      adminError.textContent = 'Session expired — please log in again, then click Publish.';
-      setTimeout(() => adminPassword.focus(), 100);
-    }, 400);
-    return false;
+    // 3. Server might be sleeping — wake it and retry once
+    if (labelEl) labelEl.textContent = 'Waking... 0s';
+    const alive = await wakeServer(labelEl);
+    if (!alive) return null; // signal: server offline, not expired
+
+    if (_storedPass) {
+      if (labelEl) labelEl.textContent = 'Re-authenticating...';
+      try {
+        const r = await fetchWithTimeout(`${RENDER_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: _storedPass })
+        }, 8000);
+        if (r.ok) {
+          const data = await r.json();
+          adminToken = data.token;
+          adminUnlocked = true;
+          return true;
+        }
+      } catch(_) {}
+    }
+
+    return false; // signal: need manual login
   }
 
   if (publishBtn) {
@@ -3693,31 +3700,36 @@ if (dpSettings && settingsPanel) {
       publishBtn.classList.add('publishing');
       publishBtn.disabled = true;
 
-      // Step 1: Wake server + validate/refresh session in one pass.
-      // wakeServer already ran during login, but Render may have slept again.
-      // validateOrRefreshToken handles the /state ping which also confirms the
-      // server is alive — so we don't need a separate wake step here.
+      // Step 1: ensure valid session (wakes server automatically if needed)
       label.textContent = 'Checking session...';
-      let tokenOk = await validateOrRefreshToken(label);
+      const sessionResult = await ensureSession(label);
 
-      // If token check failed because server is sleeping, wake it then retry once.
-      if (!tokenOk && _storedPass) {
-        label.textContent = 'Waking... 0s';
-        const alive = await wakeServer(90000, label);
-        if (!alive) {
-          publishBtn.classList.remove('publishing');
-          publishBtn.disabled = false;
-          label.textContent = 'Server offline';
-          setTimeout(() => { label.textContent = 'Publish'; }, 4000);
-          return;
-        }
-        label.textContent = 'Re-authenticating...';
-        tokenOk = await validateOrRefreshToken(label);
+      if (sessionResult === null) {
+        // Server is offline even after full wake attempt
+        publishBtn.classList.remove('publishing');
+        publishBtn.disabled = false;
+        label.textContent = 'Server offline';
+        setTimeout(() => { label.textContent = 'Publish'; }, 4000);
+        return;
       }
 
-      if (!tokenOk) return; // prompt already shown by validateOrRefreshToken
+      if (sessionResult === false) {
+        // Need manual login
+        publishBtn.classList.remove('publishing');
+        publishBtn.disabled = false;
+        adminToken = null;
+        adminUnlocked = false;
+        settingsPanel.classList.remove('open');
+        setTimeout(() => {
+          adminPrompt.classList.add('open');
+          adminPassword.value = '';
+          adminError.textContent = 'Session expired — please log in again, then click Publish.';
+          setTimeout(() => adminPassword.focus(), 100);
+        }, 400);
+        return;
+      }
 
-      // Step 2: Save full state snapshot to Redis
+      // Step 2: save full state snapshot to Redis
       label.textContent = 'Saving...';
       try {
         const stateSnapshot = {
@@ -3727,17 +3739,17 @@ if (dpSettings && settingsPanel) {
           status:       statusSelect ? statusSelect.value : 'available',
           socials:      getCurrentSocialsState()
         };
-        const sr = await fetch(`${RENDER_URL}/state`, {
+        const sr = await fetchWithTimeout(`${RENDER_URL}/state`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${adminToken}`
           },
           body: JSON.stringify({ state: stateSnapshot })
-        });
+        }, 10000);
         if (!sr.ok) throw new Error('State save failed: ' + sr.status);
       } catch(e) {
-        console.error('Publish state save error:', e);
+        console.error('Publish save error:', e);
         publishBtn.classList.remove('publishing');
         label.textContent = 'Save failed';
         setTimeout(() => { label.textContent = 'Publish'; }, 2500);
@@ -3745,17 +3757,17 @@ if (dpSettings && settingsPanel) {
         return;
       }
 
-      // Step 3: Broadcast reload to all open visitor tabs
+      // Step 3: broadcast reload to all open visitor tabs
       label.textContent = 'Publishing...';
       try {
-        const res = await fetch(`${RENDER_URL}/reload`, {
+        const res = await fetchWithTimeout(`${RENDER_URL}/reload`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${adminToken}`
           },
           body: JSON.stringify({ sessionId: SESSION_ID })
-        });
+        }, 10000);
         if (!res.ok) throw new Error('Bad response: ' + res.status);
         publishBtn.classList.remove('publishing');
         publishBtn.classList.add('published');
