@@ -1702,10 +1702,7 @@ Tone: be confident but approachable. Keep every reply short, simple, and direct 
       const res = await fetch('https://cash-github-io.onrender.com', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system: buildSystem(),
-          messages: history
-        })
+        body: JSON.stringify({ messages: history })
       });
 
       if (!res.ok) {
@@ -3143,6 +3140,22 @@ const settingsPanel = document.getElementById('settings-panel');
 const settingsClose = document.getElementById('settings-close');
 const toggleSocials = document.getElementById('toggle-socials');
 const adminPrompt = document.getElementById('admin-prompt');
+
+  // FIX #5: logout helper — tells server to invalidate token immediately
+  async function logoutAdmin() {
+    if (!adminToken) return;
+    try {
+      await fetch(`${RENDER_URL}/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({})
+      });
+    } catch (e) { /* silent — token expires on its own anyway */ }
+    adminToken = null;
+  }
 const adminPassword = document.getElementById('admin-password');
 const adminConfirm = document.getElementById('admin-confirm');
 const adminCancel = document.getElementById('admin-cancel');
@@ -3303,6 +3316,7 @@ if (dpSettings && settingsPanel) {
     settingsClose.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsPanel.classList.remove('open');
+    logoutAdmin(); // FIX #5: invalidate session when admin closes panel
   });
 
   document.addEventListener('click', (e) => {
@@ -3394,6 +3408,9 @@ if (dpSettings && settingsPanel) {
   let currentEmailValue = REAL_EMAIL; // updated on load + on apply, used by applyEmailVisibility
 
   const RENDER_URL = 'https://cash-github-io.onrender.com';
+  // Read-only key — allows page to load state on boot without admin login.
+  // Must match STATE_READ_KEY env var set in Render.
+  const STATE_READ_KEY = 'sk_read_7f3a9c2e1b4d8f6a0e5c3b7d9f2a4e8c';
 
   // Save state to Render
   async function saveState(patch) {
@@ -3413,7 +3430,9 @@ if (dpSettings && settingsPanel) {
   // Load state from Render and apply to UI
   async function loadAndApplyState() {
     try {
-      const res = await fetch(`${RENDER_URL}/state`);
+      const res = await fetch(`${RENDER_URL}/state`, {
+        headers: { Authorization: `Bearer ${STATE_READ_KEY}` }
+      });
       if (!res.ok) return;
       const state = await res.json();
 
